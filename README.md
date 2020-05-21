@@ -9,4 +9,5 @@ Final project on Trajectory Optimization
 * [Autonomous Vehicle Control: A Nonconvex Approach for Obstacle Avoidance](https://www.researchgate.net/publication/303905926_Autonomous_Vehicle_Control_A_Nonconvex_Approach_for_Obstacle_Avoidance)  
 * [Explicit MPC (slides 15-16)](https://stanford.edu/class/ee364b/lectures/mpc_slides.pdf) and computation of Invariant Sets with [MPT3](https://www.mpt3.org/UI/Invariance)  
 * [Fast MPC (Explicit MPC)](https://web.stanford.edu/~boyd/papers/pdf/fast_mpc.pdf)  
+* [IpOpt](http://cepac.cheme.cmu.edu/pasilectures/biegler/ipopt.pdf)  
 
