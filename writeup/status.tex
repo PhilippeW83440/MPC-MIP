@@ -1,0 +1,131 @@
+%% LyX 2.3.3 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[english]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{float}
+\usepackage{microtype}
+
+\makeatletter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+\usepackage[final]{nips_2016}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{nips_2016}
+
+%\usepackage[utf8]{inputenc} % allow utf-8 input
+%\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{smartdiagram}
+
+\usepackage{mathbbol}
+ 
+\usepackage{listings}
+\usepackage{xcolor}
+ 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+ 
+\lstset{style=mystyle}
+
+\makeatother
+
+\usepackage{babel}
+\usepackage[style=numeric]{biblatex}
+\addbibresource{project1.bib}
+\begin{document}
+\title{AA222 Final Project status: Trajectory Optimization with dynamic obstacles
+avoidance}
+
+\maketitle
+The project deals with trajectory optimization and control command
+of an object along a path where we have to avoid obstacles crossing
+our path. It is a multi-objective optimization problem: we have to
+optimize efficiency (time to goal), comfort (minimizing acceleration
+variations) and safety (avoiding collision). 
+
+So we far we did:
+\begin{enumerate}
+\item Literature review and project objectives definition (cf below)
+\item github repository setup 
+\item In the continuity of a previous project , we have a first baseline
+implementation. A MPC solution based on Julia JuMP.jl and ipopt.jl
+which is fully functional. 
+\end{enumerate}
+We rely on a direct collocation method where MPC is used: we plan
+over 20 time steps, for 20 commands, but apply only the first command
+before taking into account new observations for re-planning. What
+we plan to do next is:
+\begin{enumerate}
+\item Setup of our own optimizer, without relying on external packages like
+JuMP and ipopt. We will leverage on project2 work where an Interior
+Point Method based on log barrier was implemented \cite{10.5555/3351864}.
+We implemented a first order (Conjugate Gradient) and second order
+(quasi-newton BFGS) optimizer with backtracking line search.
+\item Handle an inconsistent constraint of the form $abs(.)$ as per \cite{10.5555/1734063}:
+\begin{enumerate}
+\item With slack variables
+\item With a smooth version of abs()
+\end{enumerate}
+\item Study the influence of various initialization strategies \cite{10.5555/1734063}
+:
+\begin{enumerate}
+\item Initialization with a trajectory that is dynamically feasible but
+not safe
+\item Initialization with a Neural Network heuristic. Based on a previous
+project we already have a Neural Network that can propose a candidate
+solution. This solution is unsafe in 20\% of the cases but could be
+used as a useful initializer.
+\end{enumerate}
+\item If possible, depending on fast we progress with the 3 previous objectives,
+we will compare optimization over station \cite{7225840,7353382,7535558}
+with optimization over time \cite{7995713} for 2D paths. In the first
+case we fix the time steps and derive positions at every time step,
+while in the second case we fix the spatial positions and derive the
+time instants at which we go over these spatial positions. In the
+first case, when dealing with 2D paths, an analytical representation
+of the path is required while in the second case, a sequence of waypoints
+is sufficient. But the constraints may be even more non linear and
+non convex in the later case. 
+\end{enumerate}
+Point 2) issue is avoided in many publications by claiming that a
+higher level planner decides whether we have to proceed or yield the
+way. But while this may be a reasonable strategy when dealing with
+a single object crossing our path, it does not scale to multiple crossing
+objects. A more principled approach is required to scale with the
+complexity of the scene. Point 3) could be a promising combination
+of techniques: leveraging on offline Neural Network training to speed
+up online optimization convergence. For Point 4) while some publications
+focus on one or the other approach, we would like to outline more
+precisely the pros and cons of these approaches and benchmark their
+accuracy and convergence speed. 
+
+\nocite{*}
+\printbibliography
+
+\end{document}

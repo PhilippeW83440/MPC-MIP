@@ -145,7 +145,7 @@ So we far we did:
 \end_layout
 
 \begin_layout Enumerate
-Litterature review and project objectives definition (cf below)
+Literature review and project objectives definition (cf below)
 \end_layout
 
 \begin_layout Enumerate
@@ -153,7 +153,7 @@ github repository setup
 \end_layout
 
 \begin_layout Enumerate
-In the conitnuity of a previous project , we have a first baseline implementatio
+In the continuity of a previous project , we have a first baseline implementatio
 n.
  A MPC solution based on Julia JuMP.jl and ipopt.jl which is fully functional.
  
@@ -170,17 +170,33 @@ We rely on a direct collocation method where MPC is used: we plan over 20
 Setup of our own optimizer, without relying on external packages like JuMP
  and ipopt.
  We will leverage on project2 work where an Interior Point Method based
- on log barrier was implemented.
+ on log barrier was implemented 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "10.5555/3351864"
+literal "false"
+
+\end_inset
+
+.
  We implemented a first order (Conjugate Gradient) and second order (quasi-newto
 n BFGS) optimizer with backtracking line search.
 \end_layout
 
 \begin_layout Enumerate
 Handle an inconsistent constraint of the form 
-\begin_inset Formula $abs(.)\geq something$
+\begin_inset Formula $abs(.)$
 \end_inset
 
+ as per 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "10.5555/1734063"
+literal "false"
 
+\end_inset
+
+:
 \end_layout
 
 \begin_deeper
@@ -194,7 +210,15 @@ With a smooth version of abs()
 
 \end_deeper
 \begin_layout Enumerate
-Study the influence of various initialization strategies
+Study the influence of various initialization strategies 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "10.5555/1734063"
+literal "false"
+
+\end_inset
+
+ :
 \end_layout
 
 \begin_deeper
@@ -204,17 +228,32 @@ Initialization with a trajectory that is dynamically feasible but not safe
 
 \begin_layout Enumerate
 Initialization with a Neural Network heuristic.
- Based on a previous poroject we already have a Neural Network that can
- propose a candidate solution.
- This solution is unsafe in 20% of the cases but could be used as a usefull
+ Based on a previous project we already have a Neural Network that can propose
+ a candidate solution.
+ This solution is unsafe in 20% of the cases but could be used as a useful
  initializer.
 \end_layout
 
 \end_deeper
 \begin_layout Enumerate
 If possible, depending on fast we progress with the 3 previous objectives,
- we will compare optimization over station with optimization over time for
- 2D paths.
+ we will compare optimization over station 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "7225840,7353382,7535558"
+literal "false"
+
+\end_inset
+
+ with optimization over time 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "7995713"
+literal "false"
+
+\end_inset
+
+ for 2D paths.
  In the first case we fix the time steps and derive positions at every time
  step, while in the second case we fix the spatial positions and derive
  the time instants at which we go over these spatial positions.
@@ -228,8 +267,8 @@ If possible, depending on fast we progress with the 3 previous objectives,
 
 \begin_layout Standard
 Point 2) issue is avoided in many publications by claiming that a higher
- level panner decides whether we have to proceed or yield the way.
- But while this may be a reeasonable strategy when dealing with a single
+ level planner decides whether we have to proceed or yield the way.
+ But while this may be a reasonable strategy when dealing with a single
  object crossing our path, it does not scale to multiple crossing objects.
  A more principled approach is required to scale with the complexity of
  the scene.
