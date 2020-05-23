@@ -10,10 +10,11 @@ Example command-line usage:
     julia --color=yes localtest.jl 2000             # Evaluate all simple functions a custom number of times (2000 in this case):
     julia --color=yes localtest.jl simple1          # Evaluate only simple1 the default number of times:
     julia --color=yes localtest.jl simple3 2000     # Evaluate only simple3 a custom number of times:
+    julia --color=yes localtest.jl path1d           # Evaluate only path1d the default number of times:
 """
 
 # Include the other relevant files:
-include(joinpath("project2", "helpers.jl"))
+include(joinpath("problems", "helpers.jl"))
 include("optimize.jl")
 
 if length(ARGS) == 0
