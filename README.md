@@ -13,3 +13,6 @@ Final project on Trajectory Optimization
 * [Optimization-Based Collision Avoidance](https://arxiv.org/pdf/1711.03449.pdf)
 * [Ipopt paper](http://cepac.cheme.cmu.edu/pasilectures/biegler/ipopt.pdf)  
 
+## Path2d generation  
+* [Generating paths with polynomial spirals](https://github.com/qiaoxu123/Self-Driving-Cars/blob/master/Part4-Motion_Planning_for_Self-Driving_Cars/Module7-Putting_it_all_together-Smooth_Local_Planning/Module7-Putting_it_all_together-Smooth_Local_Planning.md), [CMU DARPA paper](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.225.4980&rep=rep1&type=pdf)  
+* [Path model](https://www.ri.cmu.edu/pub_files/2012/5/ICRA12_xuwd_Final.pdf)
