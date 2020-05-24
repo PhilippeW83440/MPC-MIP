@@ -67,7 +67,7 @@ mutable struct MpcPath1d
 	# # --- NB: note that so far, all constraints are LINEAR ---
 
 	xref::Vector{Float64} # our target position and speed (ref)
-	uref::Float64 # our target control (want to stabilize at u=0)
+	uref::Vector{Float64} # our target control (want to stabilize at u=0)
 	xinit::Vector{Float64} # our initial position and speed
 
 	# NB: note that without the obstacles constraints
@@ -93,7 +93,7 @@ mutable struct MpcPath1d
 
 			  # NB: xref, uref, xinit, obstacles are expected to be changed/updated everytime we plan (TODO)
 			  xref=[200.0, 20.0], # Target pos=200 at v=20 m.s-1
-			  uref=0.0,
+			  uref=[0.0],
 			  xinit=[0.0, 20.0], # Start at s=0 with speed v=20 m.s-1
 			  obstacles=[(2.0, 100)], # In 2 sec a crossing vehicle at s=100 m
 
@@ -104,14 +104,23 @@ end
 global mpc = MpcPath1d()
 
 
-
+# We define a quadratic cost function
 @counted function path1d(x::Vector)
-	# objective >=0, we want to minimize it
-	objective = 0 # We want to minimize it, with obj>=0 in any cases 
+	cost = 0
 
-	# We define a quadratic cost function (TODO) ...
+	# stage cost
+	for k in range(1, step=mpc.nvars_dt, length=mpc.T-1)
+		xk, uk = x[k:k+1], [x[k+2]]
+		cost += (xk - mpc.xref)' * mpc.Q * (xk - mpc.xref)
+		cost += (uk - mpc.uref)' * mpc.R * (uk - mpc.uref)
+	end
 
-	return -x[1] * x[2] + 2.0 / (3.0 * sqrt(3.0))
+	xT, uT = x[end-2:end-1], [x[end]]
+	cost += (xT - mpc.xref)' * mpc.Q * (xT - mpc.xref)
+	cost = 0.5*cost # Just in case someday we want to compute gradient analytically
+
+	println("cost=$cost")
+	return cost
 end
 
 @counted function path1d_gradient(x::Vector)
@@ -120,17 +129,17 @@ end
 end
 
 @counted function path1d_constraints(x::Vector)
-	constraints = [] # They all must be of the form <= 0 ie Equality constr => 2 ineq
+	return [-1] # no constraint so far
 
 	# TODO
+	constraints = [] # They all must be of the form <= 0 ie Equality constr => 2 ineq
 
 	return [x[1] + x[2]^2 - 1,
 			-x[1] - x[2]]
 end
 
 function path1d_init()
-	return rand(2) * 2.0
-	return rand(mpc.T * mpc.nvars_dt) * 2.0
+	return rand(mpc.T * mpc.nvars_dt) * 40.0 # start with garbage values
 
 	# TODO (start with a dynamically feasible traj)
 
