@@ -139,10 +139,24 @@ end
 end
 
 function path1d_init()
-	return rand(mpc.T * mpc.nvars_dt) * 40.0 # start with garbage values
+	# Start with a simple but dynamically feasible and comfortable trajectory
+	# Constant speed from starting point
 
-	# TODO (start with a dynamically feasible traj)
+	x = zeros(mpc.T * mpc.nvars_dt)
+	v = mpc.xinit[2]
 
-	# define (somewhat) random obstacles
+	# Time Step: 1
+	x[1:2], x[3] = mpc.xinit, 0 # init [pos,speed], [accel]
+
+	# Time Steps: 2 .. T
+	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
+		x[k] = x[k - mpc.nvars_dt] + v * mpc.dt
+		x[k+1] = v
+		#x[k+2] = 0
+	end
+
+	return x
+
+	# define (somewhat) random obstacles in mpc struct
 end
 
