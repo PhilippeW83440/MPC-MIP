@@ -1,5 +1,7 @@
 ########### "Path1d" Problem Definition ###########
 
+using LinearAlgebra
+
 # via Optimization over station
 
 # ----------------------
@@ -38,15 +40,77 @@
 
 # So we have around 250 constraints (twice more than secret1)
 
+mutable struct MpcPath1d
+	# MPC planning horizon
+	T::Int64 # T horizon: number of time steps
+	dt::Float64 # Time Step length
 
-# TODO ...
+	# Quadratic cost function
+	Q::Array{Float64,2}
+	R::Array{Float64,2}
 
+	# Feasibility constraints
+	smin::Float64 # min pos
+	smax::Float64 # max pos
+	vmin::Float64 # min speed
+	vmax::Float64 # max speed
+	umin::Float64 # min acceleration/command
+	umax::Float64 # max acceleration/command
 
-global T = 20 # Time steps
+	# Safety constraints
+	dsaf::Float64 # safety distance wrt other vehicles
+
+	# Dynamic constraints (Constant Acceleration model)
+	Ad::Array{Float64,2} # [1 dt; 0 1]
+	Bd::Array{Float64,1} # [dt^2/2 dt]
+
+	# # --- NB: note that so far, all constraints are LINEAR ---
+
+	xref::Vector{Float64} # our target position and speed (ref)
+	uref::Float64 # our target control (want to stabilize at u=0)
+	xinit::Vector{Float64} # our initial position and speed
+
+	# NB: note that without the obstacles constraints
+	# we could deal with linear obj and linear constraints
+	# => a simplex algo would be guaranteed to find global optimum (TODO ?)
+
+	# Obstacles: list (1D array) of (t,s) tuples
+	# Define when and where an object will cross our path
+	# This is based on a prediction: 1 obj may lead to multiple (t,s) tuples
+	# to account for uncertainty. NB: could be more efficient to increase dsaf
+	obstacles::Array{Tuple{Float64, Float64}, 1}
+
+	nvars_dt::Int64 # Number of variables PER Time Step (2 state vars + 1 ctlr var)
+
+	MpcPath1d(T=16, dt=0.250,
+			  Q=Diagonal([1.0, 50]), R=Diagonal([0.001]),
+			  smin=0.0, smax=1000.0,
+			  vmin=0.0, vmax=25.0, # Between 0 and 25 m.s-1
+			  umin=-4.0, umax=2.0, # Between -4 and 2 m.s-2
+			  dsaf=10.0,
+			  Ad=[1.0 dt; 0 1],
+			  Bd=[0.5*dt^2, dt],
+
+			  # NB: xref, uref, xinit, obstacles are expected to be changed/updated everytime we plan (TODO)
+			  xref=[200.0, 20.0], # Target pos=200 at v=20 m.s-1
+			  uref=0.0,
+			  xinit=[0.0, 20.0], # Start at s=0 with speed v=20 m.s-1
+			  obstacles=[(2.0, 100)], # In 2 sec a crossing vehicle at s=100 m
+
+			  nvars_dt=3 # x=[s,sd] u=[sdd]
+			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt)
+end
+
+global mpc = MpcPath1d()
+
 
 
 @counted function path1d(x::Vector)
-	println(T)
+	# objective >=0, we want to minimize it
+	objective = 0 # We want to minimize it, with obj>=0 in any cases 
+
+	# We define a quadratic cost function (TODO) ...
+
 	return -x[1] * x[2] + 2.0 / (3.0 * sqrt(3.0))
 end
 
@@ -56,11 +120,20 @@ end
 end
 
 @counted function path1d_constraints(x::Vector)
+	constraints = [] # They all must be of the form <= 0 ie Equality constr => 2 ineq
+
+	# TODO
+
 	return [x[1] + x[2]^2 - 1,
 			-x[1] - x[2]]
 end
 
 function path1d_init()
 	return rand(2) * 2.0
+	return rand(mpc.T * mpc.nvars_dt) * 2.0
+
+	# TODO (start with a dynamically feasible traj)
+
+	# define (somewhat) random obstacles
 end
 
