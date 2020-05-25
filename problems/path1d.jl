@@ -143,7 +143,8 @@ end
 	# instead of using Ax=b (Ax -b <=0 && -(Ax -b) <=0
 	# We use: -ϵ <= Ax -b <= ϵ
 
-	ϵ = 1e-1 # (otherwise g(x)=(f(x+h)-f(x))/h=(Inf-f(x))/h=Inf 
+	ϵ = 1e-4 # (otherwise g(x)=(f(x+h)-f(x))/h=(Inf-f(x))/h=Inf 
+	# cf section 3.5 http://cepac.cheme.cmu.edu/pasilectures/biegler/ipopt.pdf
 
 	# Initial conditions constraint: x[1:2] == xinit
 	push!(constraints,   x[1] - mpc.xinit[1]  - ϵ)
@@ -151,10 +152,37 @@ end
 	push!(constraints,   x[2] - mpc.xinit[2]  - ϵ)
 	push!(constraints, -(x[2] - mpc.xinit[2]) - ϵ)
 
-	return constraints
+	# Time Step 1:  umin <= u1 <= umax
+	push!(constraints, x[3] - mpc.umax)
+	push!(constraints, mpc.umin - x[3])
 
-	return [x[1] + x[2]^2 - 1,
-			-x[1] - x[2]]
+	dt = mpc.dt
+
+	# Time Steps: 2 .. T
+	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
+		# smin <= sk <= smax
+		push!(constraints, x[k] - mpc.smax)
+		push!(constraints, mpc.smin - x[k])
+		# smin <= sk <= smax
+		push!(constraints, x[k+1] - mpc.vmax)
+		push!(constraints, mpc.vmin - x[k+1])
+		# umin <= uk <= umax
+		push!(constraints, x[k+2] - mpc.umax)
+		push!(constraints, mpc.umin - x[k+2])
+
+		# Dynamic Constraints: Constant Acceleration Model in between 2 Time Steps
+		kp = k - mpc.nvars_dt # p for previous
+		# TODO rewrite with Ad, Bd matrix multiplication
+		push!(constraints,   x[k] - (x[kp] + dt*x[kp+1] + 0.5*dt^2*x[kp+2]) - ϵ)
+		push!(constraints, -(x[k] - (x[kp] + dt*x[kp+1] + 0.5*dt^2*x[kp+2])) - ϵ)
+
+		push!(constraints,   x[k+1] - (x[kp+1] + dt*x[kp+2]) - ϵ)
+		push!(constraints, -(x[k+1] - (x[kp+1] + dt*x[kp+2])) - ϵ)
+	end
+
+	# TODO obstacle constraint
+
+	return constraints
 end
 
 function path1d_init()
@@ -171,7 +199,7 @@ function path1d_init()
 	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
 		x[k] = x[k - mpc.nvars_dt] + v * mpc.dt
 		x[k+1] = v
-		#x[k+2] = 0
+		x[k+2] = 0
 	end
 
 	return x

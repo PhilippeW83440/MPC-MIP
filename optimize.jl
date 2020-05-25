@@ -53,7 +53,7 @@ function bfgs(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=1
 
 	while count(f0, g0, c0) < nmax - 20 && norm(g_x) > ϵ
 
-		prob == "path1d" && println("cost=$(f0(x))")
+		prob == "path1d" && println("cost=$(f0(x)) counts=$(count(f0, g0, c0))")
 
 		# 1) Compute search direction
 		d = -Hinv * g_x
