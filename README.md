@@ -12,6 +12,7 @@ Final project on Trajectory Optimization
 * [Fast MPC (Explicit MPC)](https://web.stanford.edu/~boyd/papers/pdf/fast_mpc.pdf)  
 * [Optimization-Based Collision Avoidance](https://arxiv.org/pdf/1711.03449.pdf)
 * [Ipopt paper](http://cepac.cheme.cmu.edu/pasilectures/biegler/ipopt.pdf)  
+  - Equality Constraints in Ipopt: Cf section 3.5.  Handling Problems Without a Strict Relative Interior
 
 ## Path2d generation  
 * [Generating paths with polynomial spirals](https://github.com/qiaoxu123/Self-Driving-Cars/blob/master/Part4-Motion_Planning_for_Self-Driving_Cars/Module7-Putting_it_all_together-Smooth_Local_Planning/Module7-Putting_it_all_together-Smooth_Local_Planning.md), [CMU DARPA paper](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.225.4980&rep=rep1&type=pdf)  
