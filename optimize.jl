@@ -52,15 +52,21 @@ function bfgs(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=1
 	end
 
 	while count(f0, g0, c0) < nmax - 20 && norm(g_x) > ϵ
+
+		prob == "path1d" && println("cost=$(f0(x))")
+
 		# 1) Compute search direction
 		d = -Hinv * g_x
 		d = d./norm(d)
+
+		#println("dsearch=$d g_x=$g_x")
 
 		# 2) Compute step size
 		α = backtrack_line_search(f0, g0, c0, f, x, d, α_max, max_bt_iters, g_x)
 		if α == Nothing
 			break
 		end
+		#println("step size α=$α")
 
 		xp = x + α .* d
 
@@ -178,6 +184,7 @@ end
 
 
 function grad(f0, g0, c0, f, x, f_x; h=sqrt(eps(Float64)))
+#function grad(f0, g0, c0, f, x, f_x; h=cbrt(eps(Float64)))
 	n = length(x)
 	gradient = zeros(n)
 
@@ -190,6 +197,7 @@ function grad(f0, g0, c0, f, x, f_x; h=sqrt(eps(Float64)))
 		gradient[i] = (f(x+h*u)-f_x) / h
 		#gradient[i] = (f(x+0.5*h*u)-f(x-0.5*h*u)) / h
 	end
+	#println("gradient=$gradient")
 	return gradient
 end
 
@@ -300,6 +308,7 @@ function optimize(f, g, c, x0, n, prob)
 		end
 		#println("fint($x_int)=$(f(x_int))")
 		delta = norm(x_int - x)
+		println("delta=$delta")
 		x = x_int
 		append!(x_history, x_hist)
 	end
@@ -309,6 +318,8 @@ function optimize(f, g, c, x0, n, prob)
 	println("$prob $(barrier)barrier max_count=$(maximum(counts))")
 	println("mean: interior score = $(mean(scores)), count=$(mean(counts))")
 	println("max rho = $ρ")
+
+	prob=="path1d" && println("x_history: ", x_history[1])
 
 	global npath
 	global p1

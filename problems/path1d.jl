@@ -119,7 +119,12 @@ global mpc = MpcPath1d()
 	cost += (xT - mpc.xref)' * mpc.Q * (xT - mpc.xref)
 	cost = 0.5*cost # Just in case someday we want to compute gradient analytically
 
-	println("cost=$cost")
+	if isnan(cost)
+		println(cost)
+		println(x)
+		exit(1)
+	end
+
 	return cost
 end
 
@@ -129,10 +134,24 @@ end
 end
 
 @counted function path1d_constraints(x::Vector)
-	return [-1] # no constraint so far
-
-	# TODO
 	constraints = [] # They all must be of the form <= 0 ie Equality constr => 2 ineq
+
+	# All constraints must be of the form gi(x) <= 0
+	# So an equality constraint is translated to 2 inequality constraints
+	# gi(x) = 0 <=> gi(x) <= 0 && -gi(x) <= 0
+	# For numerical Stability to compute gradient with barrier functions
+	# instead of using Ax=b (Ax -b <=0 && -(Ax -b) <=0
+	# We use: -ϵ <= Ax -b <= ϵ
+
+	ϵ = 1e-1 # (otherwise g(x)=(f(x+h)-f(x))/h=(Inf-f(x))/h=Inf 
+
+	# Initial conditions constraint: x[1:2] == xinit
+	push!(constraints,   x[1] - mpc.xinit[1]  - ϵ)
+	push!(constraints, -(x[1] - mpc.xinit[1]) - ϵ)
+	push!(constraints,   x[2] - mpc.xinit[2]  - ϵ)
+	push!(constraints, -(x[2] - mpc.xinit[2]) - ϵ)
+
+	return constraints
 
 	return [x[1] + x[2]^2 - 1,
 			-x[1] - x[2]]
