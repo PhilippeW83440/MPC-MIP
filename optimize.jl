@@ -93,7 +93,7 @@ function bfgs(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=1
 end
 
 # was used for secret1 in place of bfgs
-function conj_grad(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=10)
+function conjgrad(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=10)
     x = x0
 	iters = 0
 	iters_feas = 0
@@ -143,7 +143,7 @@ end
 
 
 # Used during feasibility search
-function cg_feas(prob, f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
+function conjgrad_feas(prob, f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
     x = x0
 	iters = 0
 	iters_feas = 0
@@ -345,9 +345,9 @@ function optimize(f, g, c, x0, n, prob)
 
 	x_history = []
 
-	#x_feas, x_hist = cg_feas(prob, f, g, c, f_penalty, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
+	#x_feas, x_hist = conjgrad_feas(prob, f, g, c, f_penalty, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
 	# Use BFGS during feasibility search (it is much better than CG: we have a quadratic penalty)
-	x_feas, x_hist = bfgs_feas(prob, f, g, c, f_penalty, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
+	x_feas, x_hist = bfgs_feas(prob, f, g, c, f_penalty, x, 200, feasible; α_max=1.5, max_bt_iters=100)
 	append!(x_history, x_hist)
 
 	push!(feas_scores, f(x_feas))
@@ -402,11 +402,17 @@ function optimize(f, g, c, x0, n, prob)
 		#println("t=$t")
 		#println("obstacles=$(mpc.obstacles)")
 
-		plot(t, s, title="s-t graph", label="path", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:bottomright)
+		plot(t, s, title="s-t graph", label="interior path", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:bottomright)
 		for (i, obs) in enumerate(mpc.obstacles)
 			t, s = obs
 			plot!(circleShape(t, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
 		end
+
+		s = [x_feas[i] for i in (1:3:length(x_feas))]
+		t = collect((1:length(s))) .- 1
+		t = t .* mpc.dt
+		plot!(t, s, label="feasibility path", marker=2)
+
 		savefig("st_test$(test_num).png")
 		test_num += 1
 		println("max constraint violation:$(findmax(constraints(x))) out of $(length(constraints(x)))")

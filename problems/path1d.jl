@@ -160,6 +160,10 @@ end
 
 	dt = mpc.dt
 
+	ϵ = 0.25 # enlarge a litle bit so we have a region to move in
+	# But anyways we are driving down the penalty to zero and we end up wit a max constraint violation
+	# of -6.880809166887047e-8
+
 	# Time Steps: 2 .. T
 	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
 		# smin <= sk <= smax
