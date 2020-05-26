@@ -160,7 +160,8 @@ end
 
 	dt = mpc.dt
 
-	ϵ = 0.25 # enlarge a litle bit so we have a region to move in
+	ϵ = 0.25 # enlarge so we have a region to move in
+	ϵ = 3
 	# But anyways we are driving down the penalty to zero and we end up wit a max constraint violation
 	# of -6.880809166887047e-8
 
