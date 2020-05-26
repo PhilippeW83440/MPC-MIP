@@ -6,13 +6,14 @@
 
 using LinearAlgebra
 using Statistics
-#using Plots
+using Plots
+#using Printf
 
 global constraints
 global nmax
+global test_num = 1
 
-plot_simple = false
-npath = 1
+visu_graph = true
 barrier = "inv"
 barrier = "log"
 
@@ -104,7 +105,8 @@ function conj_grad(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_it
 
 	while count(f0, g0, c0) < nmax-10 && norm(g_x) > ϵ
 		f_x = f(x)
-		println("iters=$iters: f($x) = $f_x")
+		#println("iters=$iters: f($x) = $f_x")
+		println("iters=$iters: f = $f_x")
 		g_x = grad(f0, g0, c0, f, x, f_x)
 		if g_x == Nothing
 			break
@@ -151,7 +153,8 @@ function cg(f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
 
 	while iters < n && !feas(x)
 		f_x = f(x)
-		println("iters=$iters: f($x) = $f_x")
+		#println("iters=$iters: f($x) = $f_x")
+		println("iters=$iters: f() = $f_x")
 		g_x = grad(f0, g0, c0, f, x, f_x)
 		if g_x == Nothing
 			break
@@ -319,72 +322,34 @@ function optimize(f, g, c, x0, n, prob)
 	println("mean: interior score = $(mean(scores)), count=$(mean(counts))")
 	println("max rho = $ρ")
 
-	prob=="path1d" && println("x_history: ", x_history[1])
 
-	global npath
-	global p1
-	global p2
-	global p3
+	if visu_graph && prob == "path1d"
+		global test_num
 
-	if plot_simple && (prob=="simple1" || prob=="simple2") && npath <= 3
-		# Just for plotting
-		function simple1()
-			fobj(x) = -x[1]*x[2] +2/(3*sqrt(3))
-			fmin(x1, x2) = -x1*x2 +2/(3*sqrt(3))
-			c1(x1, x2) = x1 + x2^2 -1
-			c2(x1, x2) = -x1 - x2
-			#lev = [collect(0:1:10); collect(20:10:100); collect(120:20:300); collect(400:100:1000)]
-			lev = 0:0.1:30
-			return fobj, fmin, c1, c2, lev
-		end
-		
-		# Just for plotting
-		function simple2()
-			fobj(x) = 100.0*(x[2]-x[1]^2)^2 + (1-x[1])^2
-			fmin(x1, x2) = 100.0*(x2-x1^2)^2 + (1-x1)^2
-			c1(x1, x2) = (x1-1)^3 -x2 +1
-			c2(x1, x2) = x1 + x2 -2
-			lev = [collect(0:2:10); collect(20:10:100); collect(120:20:300); collect(400:100:1000)]
-			return fobj, fmin, c1, c2, lev
+		function circleShape(t, s, Δt, Δs)
+			θ = LinRange(0, 2*π, 500)
+			t .+ Δt*sin.(θ), s .+ Δs*cos.(θ)
 		end
 
-		if prob=="simple1"
-		 	fobj, fmin, c1, c2, lev = simple1()
-		elseif prob=="simple2"
-		 	fobj, fmin, c1, c2, lev = simple2()
+		mpc = path1d_mpc()
+		println("x_history[1]  : ", x_history[1])
+		println("x_history[end]: ", x_history[end])
+
+		s = [x_history[end][i] for i in (1:3:length(x_history[end]))]
+		t = collect((1:length(s))) .- 1
+		t = t .* mpc.dt
+
+		#println("s=", round.(s; digits=4))
+		#println("t=$t")
+		#println("obstacles=$(mpc.obstacles)")
+
+		plot(t, s, title="s-t graph", label="path", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:bottomright)
+		for (i, obs) in enumerate(mpc.obstacles)
+			t, s = obs
+			plot!(circleShape(t, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
 		end
-
-		f_history = [fobj(x) for x in x_history]
-		c_history = [maximum(c(x)) for x in x_history]
-		#println("$prob : ", x_history)
-		println("$prob : ", c_history)
-		println(length(x_history))
-
-		if npath == 1
-			x1 = -3:0.01:3
-			x2 = -3:0.01:3
-
-			p1 = plot(x1, x2, fmin, st=:contourf, c=:viridis, levels=lev, xaxis=("x1", (-3,3)), yaxis=("x2", (-3,3)), title="$prob $(barrier)barrier", contour_labels = true, legend=:bottomright)
-			plot!(p1, x1, x2, c1, st=:contour, levels=0:.1:50, label="c1", c=:red, linealpha=0.5)
-			plot!(p1, x1, x2, c2, st=:contour, levels=0:.1:50, label="c2", c=:red, linealpha=0.5)
-
-			p2 = plot(f_history, yaxis=:log, title="Objective for $prob with $(barrier)barrier", label="Path $npath", xlabel="iterations", ylabel="objective", reuse=false)
-			#p2 = plot(f_history, title="Objective for $prob with $(barrier)barrier", label="Path $npath", xlabel="iterations", ylabel="objective", reuse=false)
-			p3 = plot(c_history, title="Max constraint for $prob with $(barrier)barrier", label="Path $npath", xlabel="iterations", ylabel="max constraint", reuse=false)
-		else
-			plot!(p2, f_history, label="Path $npath")
-			plot!(p3, c_history, label="Path $npath")
-		end
-		#plot!(p1, Tuple.(x_history), label="path", c = :green1, marker=2)
-		col = [:green1, :blue, :cyan]
-		plot!(p1, Tuple.(x_history), label="Path $npath", c=col[npath], marker=2, linealpha=0.75)
-		npath += 1
-
-		if npath >= 4
-			savefig(p1, "paths_$(prob)_$(barrier)barrier.png")
-			savefig(p2, "obj_$(prob)_$(barrier)barrier.png")
-			savefig(p3, "constr_$(prob)_$(barrier)barrier.png")
-		end
+		savefig("st_test$(test_num).png")
+		test_num += 1
 	end
 
     return x

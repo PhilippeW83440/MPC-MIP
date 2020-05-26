@@ -82,7 +82,7 @@ mutable struct MpcPath1d
 
 	nvars_dt::Int64 # Number of variables PER Time Step (2 state vars + 1 ctlr var)
 
-	MpcPath1d(T=16, dt=0.250,
+	MpcPath1d(T=20, dt=0.250,
 			  Q=Diagonal([1.0, 50]), R=Diagonal([0.001]),
 			  smin=0.0, smax=1000.0,
 			  vmin=0.0, vmax=25.0, # Between 0 and 25 m.s-1
@@ -95,7 +95,7 @@ mutable struct MpcPath1d
 			  xref=[200.0, 20.0], # Target pos=200 at v=20 m.s-1
 			  uref=[0.0],
 			  xinit=[0.0, 20.0], # Start at s=0 with speed v=20 m.s-1
-			  obstacles=[(2.0, 100)], # In 2 sec a crossing vehicle at s=100 m
+			  obstacles=[(2.0, 60), (3.0, 80)], # In 2 sec a crossing vehicle at s=100 m
 
 			  nvars_dt=3 # x=[s,sd] u=[sdd]
 			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt)
@@ -182,10 +182,12 @@ end
 
 	# TODO obstacle constraint
 
+	#println("# cosntraints=", length(constraints))
 	return constraints
 end
 
 function path1d_init()
+	#return rand(mpc.T * mpc.nvars_dt) * 3
 	# Start with a simple but dynamically feasible and comfortable trajectory
 	# Constant speed from starting point
 
@@ -205,5 +207,9 @@ function path1d_init()
 	return x
 
 	# define (somewhat) random obstacles in mpc struct
+end
+
+function path1d_mpc()
+	return mpc
 end
 
