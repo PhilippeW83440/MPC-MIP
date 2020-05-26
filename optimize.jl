@@ -154,7 +154,7 @@ function cg(f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
 	while iters < n && !feas(x)
 		f_x = f(x)
 		#println("iters=$iters: f($x) = $f_x")
-		println("iters=$iters: f() = $f_x")
+		println("iters=$iters: f() = $f_x counts=$(count(f0, g0, c0))")
 		g_x = grad(f0, g0, c0, f, x, f_x)
 		if g_x == Nothing
 			break
@@ -162,8 +162,8 @@ function cg(f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
 
 		# 1) Compute search direction
 		if iters > 0
-			#β = max(0, dot(g_x, g_x) / (g_x ⋅ gprev_x)) # Fletcher-Reeves
-			β = max(0, dot(g_x, g_x - gprev_x) / (g_x ⋅ gprev_x)) # Polak-Ribiere
+			β = max(0, dot(g_x, g_x) / (g_x ⋅ gprev_x)) # Fletcher-Reeves
+			#β = max(0, dot(g_x, g_x - gprev_x) / (g_x ⋅ gprev_x)) # Polak-Ribiere
 			d = -g_x + β*dprev
 		else
 			d = -g_x
@@ -288,7 +288,7 @@ function optimize(f, g, c, x0, n, prob)
 
 	x_history = []
 
-	x_feas, x_hist = cg(f, g, c, f_penalty, x, 200, feasible; α_max=1.5, max_bt_iters=100)
+	x_feas, x_hist = cg(f, g, c, f_penalty, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
 	append!(x_history, x_hist)
 
 	push!(feas_scores, f(x_feas))

@@ -53,7 +53,7 @@ include("path1d.jl")
 const PROBS = Dict("simple1" => (f=simple1, g=simple1_gradient, c = simple1_constraints, x0=simple1_init, n=2000),
                    "simple2" => (f=simple2, g=simple2_gradient, c = simple2_constraints, x0=simple2_init, n=2000),
                    "simple3" => (f=simple3, g=simple3_gradient, c = simple3_constraints, x0=simple3_init, n=2000),
-                   "path1d"  => (f=path1d,  g=path1d_gradient,  c = path1d_constraints,  x0=path1d_init, n=2000))
+                   "path1d"  => (f=path1d,  g=path1d_gradient,  c = path1d_constraints,  x0=path1d_init, n=4000))
 
 
 

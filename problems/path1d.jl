@@ -95,7 +95,8 @@ mutable struct MpcPath1d
 			  xref=[200.0, 20.0], # Target pos=200 at v=20 m.s-1
 			  uref=[0.0],
 			  xinit=[0.0, 20.0], # Start at s=0 with speed v=20 m.s-1
-			  obstacles=[(2.0, 60), (3.0, 80)], # In 2 sec a crossing vehicle at s=100 m
+			  obstacles=[(2.0, 40), (3.0, 80)], # In 2 sec a crossing vehicle at s=100 m
+			  #obstacles=[(2.0, 60), (3.0, 80)], # In 2 sec a crossing vehicle at s=100 m
 
 			  nvars_dt=3 # x=[s,sd] u=[sdd]
 			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt)
@@ -180,7 +181,16 @@ end
 		push!(constraints, -(x[k+1] - (x[kp+1] + dt*x[kp+2])) - ϵ)
 	end
 
-	# TODO obstacle constraint
+	# obstacle constraint (1st tests)
+	for obstacle in mpc.obstacles
+		tcross, scross = obstacle
+		tcrossd = floor(Int, tcross/mpc.dt)
+		if (tcrossd >= 1) && (tcrossd <= mpc.T)
+			# if within MPC horizon
+			k = (tcrossd-1) * mpc.nvars_dt + 1
+			push!(constraints, (x[k] - scross + 2*mpc.dsaf))
+		end
+	end
 
 	#println("# cosntraints=", length(constraints))
 	return constraints
