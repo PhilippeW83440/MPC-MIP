@@ -143,7 +143,7 @@ end
 
 
 # Used during feasibility search
-function cg(f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
+function cg_feas(prob, f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
     x = x0
 	iters = 0
 	iters_feas = 0
@@ -179,6 +179,63 @@ function cg(f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
 		push!(x_history, x)
 
 		global dprev, gprev_x = d, g_x
+		iters += 1
+	end
+
+	return x, x_history
+end
+
+function bfgs_feas(prob, f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
+	x = x0
+	iters = 0
+	m = length(x0)
+	Id = Matrix(I, m, m)
+	Hinv = Id
+
+	x_history = []
+	push!(x_history, x)
+
+	f_x = f(x)
+	g_x = grad(f0, g0, c0, f, x, f_x)
+	if g_x == Nothing
+		return x, x_history
+	end
+
+	while iters < n && count(f0, g0, c0) < nmax - 20 && !feas(x)
+
+		println("iters=$iters: f() = $f_x counts=$(count(f0, g0, c0))")
+
+		# 1) Compute search direction
+		d = -Hinv * g_x
+		d = d./norm(d)
+
+		#println("dsearch=$d g_x=$g_x")
+
+		# 2) Compute step size
+		α = backtrack_line_search(f0, g0, c0, f, x, d, α_max, max_bt_iters, g_x)
+		if α == Nothing
+			break
+		end
+		#println("step size α=$α")
+
+		xp = x + α .* d
+
+		f_xp = f(xp)
+		g_xp = grad(f0, g0, c0, f, xp, f_xp)
+		if g_xp == Nothing
+			break
+		end
+
+		δ = xp - x
+		y = g_xp - g_x
+
+		# 3) Update Hinv
+		#den = y'⋅δ + 1e-5 # to avoid divide by 0 ...
+		den = max(1e-3, y'⋅δ)
+		Hinv = (Id - δ*y'/den) * Hinv * (Id - y*δ'/den) + δ*δ'/den 
+
+		x, g_x, f_x = xp, g_xp, f_xp
+		push!(x_history, x)
 		iters += 1
 	end
 
@@ -288,7 +345,9 @@ function optimize(f, g, c, x0, n, prob)
 
 	x_history = []
 
-	x_feas, x_hist = cg(f, g, c, f_penalty, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
+	#x_feas, x_hist = cg_feas(prob, f, g, c, f_penalty, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
+	# Use BFGS during feasibility search (it is much better than CG: we have a quadratic penalty)
+	x_feas, x_hist = bfgs_feas(prob, f, g, c, f_penalty, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
 	append!(x_history, x_hist)
 
 	push!(feas_scores, f(x_feas))
@@ -333,7 +392,7 @@ function optimize(f, g, c, x0, n, prob)
 
 		mpc = path1d_mpc()
 		println("x_history[1]  : ", x_history[1])
-		println("x_history[end]: ", x_history[end])
+		println("x_history[end]: ", round.(x_history[end]; digits=4))
 
 		s = [x_history[end][i] for i in (1:3:length(x_history[end]))]
 		t = collect((1:length(s))) .- 1
@@ -350,6 +409,7 @@ function optimize(f, g, c, x0, n, prob)
 		end
 		savefig("st_test$(test_num).png")
 		test_num += 1
+		println("max constraint violation:$(findmax(constraints(x))) out of $(length(constraints(x)))")
 	end
 
     return x
