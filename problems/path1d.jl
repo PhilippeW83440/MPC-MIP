@@ -144,7 +144,8 @@ end
 	# instead of using Ax=b (Ax -b <=0 && -(Ax -b) <=0
 	# We use: -ϵ <= Ax -b <= ϵ
 
-	ϵ = 1e-4 # (otherwise g(x)=(f(x+h)-f(x))/h=(Inf-f(x))/h=Inf 
+	ϵ = 1e-2 # (otherwise g(x)=(f(x+h)-f(x))/h=(Inf-f(x))/h=Inf 
+	# 1 centimeter accuracy ... No need to claim more ...
 	# cf section 3.5 http://cepac.cheme.cmu.edu/pasilectures/biegler/ipopt.pdf
 
 	# Initial conditions constraint: x[1:2] == xinit
@@ -187,8 +188,9 @@ end
 		tcrossd = floor(Int, tcross/mpc.dt)
 		if (tcrossd >= 1) && (tcrossd <= mpc.T)
 			# if within MPC horizon
-			k = (tcrossd-1) * mpc.nvars_dt + 1
-			push!(constraints, (x[k] - scross + 2*mpc.dsaf))
+			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
+			k = tcrossd * mpc.nvars_dt + 1
+			push!(constraints, (x[k] - scross + 1.1*mpc.dsaf))
 		end
 	end
 
