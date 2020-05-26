@@ -404,14 +404,15 @@ function optimize(f, g, c, x0, n, prob)
 
 		plot(t, s, title="s-t graph", label="interior path", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:bottomright)
 		for (i, obs) in enumerate(mpc.obstacles)
-			t, s = obs
-			plot!(circleShape(t, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
+			tt, s = obs
+			plot!(circleShape(tt, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
 		end
 
 		s = [x_feas[i] for i in (1:3:length(x_feas))]
-		t = collect((1:length(s))) .- 1
-		t = t .* mpc.dt
 		plot!(t, s, label="feasibility path", marker=2)
+
+		s = [x0[i] for i in (1:3:length(x0))]
+		plot!(t, s, label="initial path", marker=2)
 
 		savefig("st_test$(test_num).png")
 		test_num += 1

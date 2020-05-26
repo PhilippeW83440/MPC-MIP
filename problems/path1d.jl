@@ -92,11 +92,10 @@ mutable struct MpcPath1d
 			  Bd=[0.5*dt^2, dt],
 
 			  # NB: xref, uref, xinit, obstacles are expected to be changed/updated everytime we plan (TODO)
-			  xref=[200.0, 20.0], # Target pos=200 at v=20 m.s-1
+			  xref=[100.0, 20.0], # Target pos=100 at v=20 m.s-1
 			  uref=[0.0],
 			  xinit=[0.0, 20.0], # Start at s=0 with speed v=20 m.s-1
-			  obstacles=[(2.0, 40), (3.0, 80)], # In 2 sec a crossing vehicle at s=100 m
-			  #obstacles=[(2.0, 60), (3.0, 80)], # In 2 sec a crossing vehicle at s=100 m
+			  obstacles=[(2.0, 40), (3.0, 80)], # In 2 sec a crossing vehicle at s=40 m
 
 			  nvars_dt=3 # x=[s,sd] u=[sdd]
 			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt)
@@ -118,6 +117,7 @@ global mpc = MpcPath1d()
 
 	xT, uT = x[end-2:end-1], [x[end]]
 	cost += (xT - mpc.xref)' * mpc.Q * (xT - mpc.xref)
+	cost /= (mpc.nvars_dt * mpc.T) # make the cost num_steps independant
 	cost = 0.5*cost # Just in case someday we want to compute gradient analytically
 
 	if isnan(cost)
@@ -219,8 +219,6 @@ function path1d_init()
 	end
 
 	return x
-
-	# define (somewhat) random obstacles in mpc struct
 end
 
 function path1d_mpc()
