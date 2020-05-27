@@ -38,7 +38,7 @@ function backtrack_line_search(f0, g0, c0, f, x, d, α, max_bt_iters, g_x; p=0.5
 end
 
 
-function bfgs(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=10)
+function bfgs(prob, f0, g0, c0, f, x0; ϵ=1e-3, α_max=2.5, max_bt_iters=10)
 	x = x0
 	m = length(x0)
 	Id = Matrix(I, m, m)
@@ -93,98 +93,6 @@ function bfgs(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=1
 	return x, x_history
 end
 
-# was used for secret1 in place of bfgs
-function conjgrad(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=10)
-    x = x0
-	iters = 0
-	iters_feas = 0
-
-	x_history = []
-	push!(x_history, x)
-
-	g_x = Inf
-
-	while count(f0, g0, c0) < nmax-10 && norm(g_x) > ϵ
-		f_x = f(x)
-		#println("iters=$iters: f($x) = $f_x")
-		println("iters=$iters: f = $f_x")
-		g_x = grad(f0, g0, c0, f, x, f_x)
-		if g_x == Nothing
-			break
-		end
-
-		# 1) Compute search direction
-		if iters > 0
-			#β = max(0, dot(g_x, g_x) / (g_x ⋅ gprev_x)) # Fletcher-Reeves
-			β = max(0, dot(g_x, g_x - gprev_x) / (g_x ⋅ gprev_x)) # Polak-Ribiere
-			d = -g_x + β*dprev
-		else
-			d = -g_x
-		end
-		d = d./norm(d)
-
-		# 2) Compute step size
-		α = backtrack_line_search(f0, g0, c0, f, x, d, α_max, max_bt_iters, g_x)
-		if α == Nothing
-			break
-		end
-		xp = x + α .* d
-
-		if norm(xp - x) < 1e-5
-			break
-		end
-		x = xp
-		push!(x_history, x)
-
-		global dprev, gprev_x = d, g_x
-	end
-
-	return x, x_history
-end
-
-
-# Used during feasibility search
-function conjgrad_feas(prob, f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
-    x = x0
-	iters = 0
-	iters_feas = 0
-
-	x_history = []
-	push!(x_history, x)
-
-	while iters < n && !feas(x)
-		f_x = f(x)
-		#println("iters=$iters: f($x) = $f_x")
-		println("iters=$iters: f() = $f_x counts=$(count(f0, g0, c0))")
-		g_x = grad(f0, g0, c0, f, x, f_x)
-		if g_x == Nothing
-			break
-		end
-
-		# 1) Compute search direction
-		if iters > 0
-			β = max(0, dot(g_x, g_x) / (g_x ⋅ gprev_x)) # Fletcher-Reeves
-			#β = max(0, dot(g_x, g_x - gprev_x) / (g_x ⋅ gprev_x)) # Polak-Ribiere
-			d = -g_x + β*dprev
-		else
-			d = -g_x
-		end
-		d = d./norm(d)
-
-		# 2) Compute step size
-		α = backtrack_line_search(f0, g0, c0, f, x, d, α_max, max_bt_iters, g_x)
-		if α == Nothing
-			break
-		end
-		x = x + α .* d
-		push!(x_history, x)
-
-		global dprev, gprev_x = d, g_x
-		iters += 1
-	end
-
-	return x, x_history
-end
 
 function bfgs_feas(prob, f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
 	x = x0
@@ -322,6 +230,21 @@ else
 end
 
 
+function penalty_method(prob, f0, g0, c0, f, p, x, k_max; ρ=1, γ=2)
+	x_history = []
+	for k in 1:k_max
+		println("ρ=$ρ")
+		x, x_hist = bfgs(prob, f0, g0, c0, x -> f(x) + ρ*p(x), x; ϵ=1e-2, α_max=1.4, max_bt_iters=60)
+		append!(x_history, x_hist)
+		ρ *= γ
+		if p(x) == 0
+			return x
+		end
+	end
+	return x, x_history
+end
+
+
 """
     optimize(f, g, c, x0, n, prob)
 
@@ -343,7 +266,6 @@ scores = []
 counts = []
 
 function optimize(f, g, c, h, x0, n, prob)
-    x_best = x0
 	x = x0
 	global constraints_ineq = c
 	global constraints_eq = h
@@ -351,42 +273,56 @@ function optimize(f, g, c, h, x0, n, prob)
 
 	x_history = []
 
-	#x_feas, x_hist = conjgrad_feas(prob, f, g, c, p_quadratic, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
-	# Use BFGS during feasibility search (it is much better than CG: we have a quadratic penalty)
-	x_feas, x_hist = bfgs_feas(prob, f, g, c, p_quadratic, x, 200, feasible; α_max=1.5, max_bt_iters=100)
-	append!(x_history, x_hist)
+	if occursin("penalty", prob)
+		# ----------------
+		# Penalty Method
+		# ----------------
+		x, x_history = penalty_method(prob, f, g, c, f, p_quadratic, x, 20; ρ=16, γ=2)
+		x_feas = x
+	else
+		# ----------------------
+		# Interior Point Method
+		# ----------------------
 
-	push!(feas_scores, f(x_feas))
-	push!(feas_counts, count(f,g,c))
-	println("mean: feasibility score = $(mean(feas_scores)), count=$(mean(feas_counts))")
-
-	x = x_feas
-
-	# Interior Point Method
-	prob=="simple2" ? ρ=10 : ρ=100
-	ρ_max = 1e9
-	delta = Inf
-	while count(f, g, c) < nmax - 10 && delta > 1e-5 #&& ρ < ρ_max
-		if prob=="simple2"
-			x_int, x_hist = bfgs(prob, f, g, c, x -> f(x) + f_barrier(x)/ρ, x, feasible; ϵ=0.01, α_max=1.4, max_bt_iters=30)
-			ρ *= 5
-		else
-			x_int, x_hist = bfgs(prob, f, g, c, x -> f(x) + f_barrier(x)/ρ, x, feasible; ϵ=1e-2, α_max=1.4, max_bt_iters=60)
-			ρ *= 10
-		end
-		#println("fint($x_int)=$(f(x_int))")
-		delta = norm(x_int - x)
-		println("delta=$delta")
-		x = x_int
+		# Use BFGS during feasibility search (it is much better than CG: we have a quadratic penalty)
+		x_feas, x_hist = bfgs_feas(prob, f, g, c, p_quadratic, x, 200, feasible; α_max=1.5, max_bt_iters=100)
 		append!(x_history, x_hist)
+
+		push!(feas_scores, f(x_feas))
+		push!(feas_counts, count(f,g,c))
+		println("mean: feasibility score = $(mean(feas_scores)), count=$(mean(feas_counts))")
+
+		x = x_feas
+
+		# Interior Point Method
+		prob=="simple2" ? ρ=10 : ρ=100
+		ρ_max = 1e9
+		delta = Inf
+		while count(f, g, c) < nmax - 10 && delta > 1e-5 #&& ρ < ρ_max
+			if prob=="simple2"
+				x_int, x_hist = bfgs(prob, f, g, c, x -> f(x) + f_barrier(x)/ρ, x; ϵ=1e-2, α_max=1.4, max_bt_iters=30)
+				ρ *= 5
+			else
+				x_int, x_hist = bfgs(prob, f, g, c, x -> f(x) + f_barrier(x)/ρ, x; ϵ=1e-2, α_max=1.4, max_bt_iters=60)
+				ρ *= 10
+			end
+			#println("fint($x_int)=$(f(x_int))")
+			delta = norm(x_int - x)
+			println("delta=$delta")
+			x = x_int
+			append!(x_history, x_hist)
+		end
+		println("max rho = $ρ")
 	end
 
 	push!(scores, f(x))
 	push!(counts, count(f,g,c))
-	println("$prob $(barrier)barrier max_count=$(maximum(counts))")
-	println("mean: interior score = $(mean(scores)), count=$(mean(counts))")
-	println("max rho = $ρ")
+	println("$prob max_count=$(maximum(counts))")
+	println("mean: final score = $(mean(scores)), count=$(mean(counts))")
 
+	# ----------------
+	# Visu Tool
+	# ----------------
 
 	if visu_graph && occursin("path1d", prob)
 		global test_num
@@ -408,21 +344,24 @@ function optimize(f, g, c, h, x0, n, prob)
 		#println("t=$t")
 		#println("obstacles=$(mpc.obstacles)")
 
-		plot(t, s, title="s-t graph", label="interior path", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:bottomright)
+		plot(t, s, title="s-t graph", label="final path", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:bottomright)
 		for (i, obs) in enumerate(mpc.obstacles)
 			tt, s = obs
 			plot!(circleShape(tt, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
 		end
 
-		s = [x_feas[i] for i in (1:3:length(x_feas))]
-		plot!(t, s, label="feasibility path", marker=2)
+		if occursin("interior", prob)
+			s = [x_feas[i] for i in (1:3:length(x_feas))]
+			plot!(t, s, label="feasibility path", marker=2)
+		end
 
 		s = [x0[i] for i in (1:3:length(x0))]
 		plot!(t, s, label="initial path", marker=2)
 
 		savefig("plots/$(prob)_st_test$(test_num).png")
 		test_num += 1
-		println("max constraint violation:$(findmax(constraints_ineq(x))) out of $(length(constraints_ineq(x)))")
+		println("equality constraints: $(constraints_eq(x))")
+		println("max inequality constraint violation:$(findmax(constraints_ineq(x))) out of $(length(constraints_ineq(x)))")
 	end
 
     return x

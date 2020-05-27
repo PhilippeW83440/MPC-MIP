@@ -83,7 +83,7 @@ mutable struct MpcPath1d
 	nvars_dt::Int64 # Number of variables PER Time Step (2 state vars + 1 ctlr var)
 
 	MpcPath1d(T=20, dt=0.250,
-			  Q=Diagonal([1.0, 50]), R=Diagonal([0.001]),
+			  Q=Diagonal([0.2, 10]), R=Diagonal([0.001]), # Normalize <=10 the coefficients
 			  smin=0.0, smax=1000.0,
 			  vmin=0.0, vmax=25.0, # Between 0 and 25 m.s-1
 			  umin=-4.0, umax=2.0, # Between -4 and 2 m.s-2
@@ -118,7 +118,6 @@ global mpc = MpcPath1d()
 	xT, uT = x[end-2:end-1], [x[end]]
 	cost += (xT - mpc.xref)' * mpc.Q * (xT - mpc.xref)
 	cost /= (mpc.nvars_dt * mpc.T) # make the cost num_steps independant
-	cost = 0.5*cost # Just in case someday we want to compute gradient analytically
 
 	if isnan(cost)
 		println(cost)
