@@ -9,7 +9,8 @@ using Statistics
 using Plots
 #using Printf
 
-global constraints
+global constraints_ineq
+global constraints_eq
 global nmax
 global test_num = 1
 
@@ -54,7 +55,7 @@ function bfgs(prob, f0, g0, c0, f, x0, feas; ϵ=1e-3, α_max=2.5, max_bt_iters=1
 
 	while count(f0, g0, c0) < nmax - 20 && norm(g_x) > ϵ
 
-		prob == "path1d" && println("cost=$(f0(x)) counts=$(count(f0, g0, c0))")
+		occursin("path1d", prob) && println("cost=$(f0(x)) counts=$(count(f0, g0, c0))")
 
 		# 1) Compute search direction
 		d = -Hinv * g_x
@@ -261,19 +262,23 @@ function grad(f0, g0, c0, f, x, f_x; h=sqrt(eps(Float64)))
 	return gradient
 end
 
-function f_penalty(x)
+function p_quadratic(x)
 	penalty = 0
-	c_x = constraints(x)
+	c_x = constraints_ineq(x)
 	for i in 1:length(c_x)
 		if c_x[i] > 0
 			penalty += c_x[i]^2
 		end
 	end
+	h_x = constraints_eq(x)
+	for i in 1:length(h_x)
+		penalty += h_x[i]^2
+	end
 	return penalty
 end
 
 function feasible(x)
-	c_x = constraints(x)
+	c_x = constraints_ineq(x)
 	for i in 1:length(c_x)
 		if c_x[i] > 0
 			return false
@@ -285,7 +290,7 @@ end
 # --- Inverse Barrier for Interior Point method
 function f_invb(x)
 	res = 0
-	c_x = constraints(x)
+	c_x = constraints_ineq(x)
 	for i in 1:length(c_x)
 		if c_x[i] > 0
 			return Inf
@@ -299,7 +304,7 @@ end
 # --- Log Barrier for Interior Point method
 function f_logb(x)
 	res = 0
-	c_x = constraints(x)
+	c_x = constraints_ineq(x)
 	for i in 1:length(c_x)
 		if c_x[i] > 0
 			return Inf
@@ -337,17 +342,18 @@ feas_counts = []
 scores = []
 counts = []
 
-function optimize(f, g, c, x0, n, prob)
+function optimize(f, g, c, h, x0, n, prob)
     x_best = x0
 	x = x0
-	global constraints = c
+	global constraints_ineq = c
+	global constraints_eq = h
 	global nmax = n
 
 	x_history = []
 
-	#x_feas, x_hist = conjgrad_feas(prob, f, g, c, f_penalty, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
+	#x_feas, x_hist = conjgrad_feas(prob, f, g, c, p_quadratic, x, 2000, feasible; α_max=1.5, max_bt_iters=100)
 	# Use BFGS during feasibility search (it is much better than CG: we have a quadratic penalty)
-	x_feas, x_hist = bfgs_feas(prob, f, g, c, f_penalty, x, 200, feasible; α_max=1.5, max_bt_iters=100)
+	x_feas, x_hist = bfgs_feas(prob, f, g, c, p_quadratic, x, 200, feasible; α_max=1.5, max_bt_iters=100)
 	append!(x_history, x_hist)
 
 	push!(feas_scores, f(x_feas))
@@ -382,7 +388,7 @@ function optimize(f, g, c, x0, n, prob)
 	println("max rho = $ρ")
 
 
-	if visu_graph && prob == "path1d"
+	if visu_graph && occursin("path1d", prob)
 		global test_num
 
 		function circleShape(t, s, Δt, Δs)
@@ -414,9 +420,9 @@ function optimize(f, g, c, x0, n, prob)
 		s = [x0[i] for i in (1:3:length(x0))]
 		plot!(t, s, label="initial path", marker=2)
 
-		savefig("st_test$(test_num).png")
+		savefig("plots/$(prob)_st_test$(test_num).png")
 		test_num += 1
-		println("max constraint violation:$(findmax(constraints(x))) out of $(length(constraints(x)))")
+		println("max constraint violation:$(findmax(constraints_ineq(x))) out of $(length(constraints_ineq(x)))")
 	end
 
     return x

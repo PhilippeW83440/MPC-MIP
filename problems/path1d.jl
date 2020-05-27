@@ -134,6 +134,10 @@ end
 	exit(1)
 end
 
+# ---------------------------------------------------------------
+# 1st approach: all constraints handled as inequality constraints
+# ---------------------------------------------------------------
+
 @counted function path1d_constraints(x::Vector)
 	constraints = [] # They all must be of the form <= 0 ie Equality constr => 2 ineq
 
@@ -199,6 +203,69 @@ end
 	#println("# cosntraints=", length(constraints))
 	return constraints
 end
+
+# ------------------------------------------------------------
+# 2nd approach: separate inequality from equality constraints
+# ------------------------------------------------------------
+
+@counted function path1d_inequality_constraints(x::Vector) # the c(x) <= 0 function
+	constraints = [] # They all must be of the form <= 0 ie Equality constr => 2 ineq
+
+	# Time Step 1:  umin <= u1 <= umax
+	push!(constraints, x[3] - mpc.umax)
+	push!(constraints, mpc.umin - x[3])
+
+	# Time Steps: 2 .. T
+	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
+		# smin <= sk <= smax
+		push!(constraints, x[k] - mpc.smax)
+		push!(constraints, mpc.smin - x[k])
+		# smin <= sk <= smax
+		push!(constraints, x[k+1] - mpc.vmax)
+		push!(constraints, mpc.vmin - x[k+1])
+		# umin <= uk <= umax
+		push!(constraints, x[k+2] - mpc.umax)
+		push!(constraints, mpc.umin - x[k+2])
+	end
+
+	# obstacle constraint (1st tests)
+	for obstacle in mpc.obstacles
+		tcross, scross = obstacle
+		tcrossd = floor(Int, tcross/mpc.dt)
+		if (tcrossd >= 1) && (tcrossd <= mpc.T)
+			# if within MPC horizon
+			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
+			k = tcrossd * mpc.nvars_dt + 1
+			push!(constraints, (x[k] - scross + 1.1*mpc.dsaf))
+		end
+	end
+
+	#println("# cosntraints=", length(constraints))
+	return constraints
+end
+
+@counted function path1d_equality_constraints(x::Vector) # the h(x)=0 function
+	constraints = [] # Initial conditions and Dynamic Model
+
+	# Initial conditions constraint: x[1:2] == xinit
+	push!(constraints,   x[1] - mpc.xinit[1])
+	push!(constraints,   x[2] - mpc.xinit[2])
+
+	dt = mpc.dt
+
+	# Time Steps: 2 .. T
+	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
+		# Dynamic Constraints: Constant Acceleration Model in between 2 Time Steps
+		kp = k - mpc.nvars_dt # p for previous
+		# TODO rewrite with Ad, Bd matrix multiplication
+		push!(constraints,   x[k] - (x[kp] + dt*x[kp+1] + 0.5*dt^2*x[kp+2]))
+		push!(constraints,   x[k+1] - (x[kp+1] + dt*x[kp+2]))
+	end
+
+	#println("# cosntraints=", length(constraints))
+	return constraints
+end
+
 
 function path1d_init()
 	#return rand(mpc.T * mpc.nvars_dt) * 3

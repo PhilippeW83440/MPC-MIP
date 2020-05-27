@@ -1,1 +1,1 @@
-julia localtest.jl path1d 1
+julia localtest.jl path1d_interior1 1
