@@ -2,7 +2,8 @@
 Final project on Trajectory Optimization
 
 ## Optimization Algorithms  
-* [Log Barrier with equality constraints](https://www.stat.cmu.edu/~ryantibs/convexopt/lectures/barr-method.pdf)    
+* [Log Barrier with equality constraints](https://www.stat.cmu.edu/~ryantibs/convexopt/lectures/barr-method.pdf)  
+* [Equality constrained Newton: Stephen Boyd book p.526,545/546,548,552/553](https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf)    
 * [Primal-Dual Interior-Point Methods](https://www.stat.cmu.edu/~ryantibs/convexopt/lectures/primal-dual.pdf)  
 * [Augmented Lagrangian](http://www.cs.cmu.edu/~pradeepr/convexopt/Lecture_Slides/Augmented-lagrangian.pdf) and class book section 10.8 p.183  
 * [Ipopt paper](http://cepac.cheme.cmu.edu/pasilectures/biegler/ipopt.pdf)  
