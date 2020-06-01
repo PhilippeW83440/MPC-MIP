@@ -1,9 +1,14 @@
-using Convex, GLPK
+using Convex
+using Mosek, MosekTools # License required www.mosek.com
 using LinearAlgebra
 
 # -----------------------------------
 # MPC with Mixed Integer Programming
 # -----------------------------------
+
+# We use Mosek to deal with Quadratic cost fct + MIP
+# Open source GPLK does not deal with Quadratic cost fct
+# Another commercial alternative could be: Gurobi
 
 # We will use Boolean Variables to deal with disjunctive constraints (OR)
 # Cf https://optimization.mccormick.northwestern.edu/index.php/Disjunctive_inequalities
@@ -90,6 +95,19 @@ function path1d_cost(mpc::MpcPath1d, x::Variable)
 end
 
 function path1d_constraints(mpc::MpcPath1d, x::Variable, p)
+	# --- Equality constraints ---
+	p.constraints += [x[1] == mpc.xinit[1]]
+	p.constraints += [x[2] == mpc.xinit[2]]
+
+	dt = mpc.dt
+
+	# Time Steps: 2 .. T Dynamics Cosntraints
+	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
+		# Dynamic Constraints: Constant Acceleration Model in between 2 Time Steps
+		kp = k - mpc.nvars_dt # p for previous
+		p.constraints += [x[k] == x[kp] + dt*x[kp+1] + 0.5*dt^2*x[kp+2]]
+		p.constraints += [x[k+1] == x[kp+1] + dt*x[kp+2]]
+	end
 
 	# --- Inequality constraints ---
 	p.constraints += [mpc.umin <= x[3], x[3] <= mpc.umax]
@@ -101,6 +119,7 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p)
 		p.constraints += [mpc.umin <= x[k+2], x[k+2] <= mpc.umax]
 	end
 
+	# TODO Obstacles constraints
 end
 
 function path1d_init(mpc::MpcPath1d)
@@ -123,16 +142,24 @@ end
 
 
 mpc = MpcPath1d()
-
 x = Variable(60)
+b = Variable(1, :Bin)
+
 x.value = path1d_init(mpc)
-println(x.value)
+println("x0=$(x.value)")
 
 cost = path1d_cost(mpc, x)
+#cost = x[1]
 
-p = minimize(cost)
-println(p)
-
+# so far just checking we can use binary variables with Quadratic cost
+p = minimize(cost+b)
 path1d_constraints(mpc, x, p)
 
-solver = () -> GLPK.Optimizer()
+println("start solver...")
+solver = () -> Mosek.Optimizer()
+solve!(p, solver)
+println("solver done")
+
+println("status=", p.status)
+println("cost=", round(p.optval, digits=2))
+println("x=", round.(x.value, digits=2))
