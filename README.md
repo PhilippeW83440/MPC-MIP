@@ -6,6 +6,7 @@ Final project on Trajectory Optimization
 * [Equality constrained Newton: Stephen Boyd book p.526,545/546,548,552/553](https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf)    
 * [Primal-Dual Interior-Point Methods](https://www.stat.cmu.edu/~ryantibs/convexopt/lectures/primal-dual.pdf)  
 * [Augmented Lagrangian](http://www.cs.cmu.edu/~pradeepr/convexopt/Lecture_Slides/Augmented-lagrangian.pdf) and class book section 10.8 p.183  
+* [Disjunctive Inequalities](https://optimization.mccormick.northwestern.edu/index.php/Disjunctive_inequalities)  
 * [Ipopt paper](http://cepac.cheme.cmu.edu/pasilectures/biegler/ipopt.pdf)  
   - Equality Constraints in Ipopt: Cf section 3.5.  Handling Problems Without a Strict Relative Interior
 
