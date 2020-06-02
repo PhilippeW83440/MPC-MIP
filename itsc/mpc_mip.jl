@@ -1,6 +1,19 @@
-using Convex
+using Convex, SCS
+using ECOS
+using OSQP
+using GLPK
 using Mosek, MosekTools # License required www.mosek.com
 using LinearAlgebra
+using Plots
+
+visu_graph = true
+pkg = "SCS" # Well ... SCS and ECOS are the only two that work fine on this pb ...
+
+solvers = Dict("SCS" => ()->SCS.Optimizer(), 
+               "ECOS" => ()->ECOS.Optimizer(),
+               "OSQP" => ()->OSQP.Optimizer(), # Fail ...
+               "GLPK" => ()->GLPK.Optimizer(), # does not support QP obj
+               "Mosek" => ()->Mosek.Optimizer()) # Fail ... TOO SLOW PROGRESS
 
 # -----------------------------------
 # MPC with Mixed Integer Programming
@@ -120,6 +133,18 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p)
 	end
 
 	# TODO Obstacles constraints
+	# obstacle constraint (1st tests)
+	for obstacle in mpc.obstacles
+		tcross, scross = obstacle
+		tcrossd = floor(Int, tcross/mpc.dt)
+		if (tcrossd >= 1) && (tcrossd <= mpc.T)
+			# if within MPC horizon
+			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
+			k = tcrossd * mpc.nvars_dt + 1
+			p.constraints += [x[k] <= scross - 1.0*mpc.dsaf]
+		end
+	end
+
 end
 
 function path1d_init(mpc::MpcPath1d)
@@ -141,25 +166,58 @@ function path1d_init(mpc::MpcPath1d)
 end
 
 
+runtime = 0
 mpc = MpcPath1d()
 x = Variable(60)
-b = Variable(1, :Bin)
-
-x.value = path1d_init(mpc)
-println("x0=$(x.value)")
+#b = Variable(1, :Bin)
+x0 = path1d_init(mpc)
 
 cost = path1d_cost(mpc, x)
-#cost = x[1]
 
 # so far just checking we can use binary variables with Quadratic cost
-p = minimize(cost+b)
+#p = minimize(cost+b)
+p = minimize(cost)
 path1d_constraints(mpc, x, p)
 
-println("start solver...")
-solver = () -> Mosek.Optimizer()
-solve!(p, solver)
-println("solver done")
+solver = solvers[pkg]
 
-println("status=", p.status)
-println("cost=", round(p.optval, digits=2))
-println("x=", round.(x.value, digits=2))
+for i in 1:2
+	println("start solver...")
+	x0 = path1d_init(mpc)
+	x.value = x0
+	println("x0=$x0")
+
+	global runtime = @elapsed solve!(p, solver, warmstart=true)
+
+	println("solver done")
+	println("status=", p.status)
+	println("cost=", round(p.optval, digits=2))
+	x.value != nothing && println("x=", round.(x.value, digits=2))
+	runtime = convert(Int64, round(1000*runtime))
+	println("runtime=$runtime ms")
+end
+
+if visu_graph
+	function circleShape(t, s, Δt, Δs)
+		θ = LinRange(0, 2*π, 500)
+		t .+ Δt*sin.(θ), s .+ Δs*cos.(θ)
+	end
+
+	x = x.value
+
+	s = [x[i] for i in (1:3:length(x))]
+	t = collect((1:length(s))) .- 1
+	t = t .* mpc.dt
+
+	plot(t, s, title="s-t graph", label="$(pkg) path ($runtime ms)", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:bottomright)
+	for (i, obs) in enumerate(mpc.obstacles)
+		tt, s = obs
+		plot!(circleShape(tt, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
+	end
+
+	s = [x0[i] for i in (1:3:length(x0))]
+	plot!(t, s, label="initial path", marker=2)
+
+	savefig("st_graph_$pkg.png")
+end
+
