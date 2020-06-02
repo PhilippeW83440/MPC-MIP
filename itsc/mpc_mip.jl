@@ -6,8 +6,8 @@ using CSDP
 using SDPA
 using ECOS
 
-#using OSQP
-#using GLPK
+using OSQP
+using GLPK
 
 using Gurobi # License required
 using Mosek, MosekTools # License required www.mosek.com
@@ -24,16 +24,17 @@ solvers = Dict("SCS" => ()->SCS.Optimizer(),
                "CSDP" => ()->CSDP.Optimizer(),
                "SDPA" => ()->SDPA.Optimizer(),
                "CPLEX" => ()->CPLEX.Optimizer(),
-               "Gurobi" => ()->Gurobi.Optimizer(), # Fail ...
-               #"OSQP" => ()->OSQP.Optimizer(), # Fail ...
-               #"GLPK" => ()->GLPK.Optimizer(), # does not support QP obj
-               "Mosek" => ()->Mosek.Optimizer(), # Fail ... TOO SLOW PROGRESS
+               "Gurobi" => ()->Gurobi.Optimizer(),
+               "OSQP" => ()->OSQP.Optimizer(),
+               "GLPK" => ()->GLPK.Optimizer(method = GLPK.SIMPLEX), # does not support QP obj
+               #"GLPK" => ()->GLPK.Optimizer(method = GLPK.INTERIOR), # does not support QP obj
+               "Mosek" => ()->Mosek.Optimizer(),
                "ECOS" => ()->ECOS.Optimizer())
 
 # Use Mosek or ECOS: they are very fast (<20 ms and < 10 ms) and good ...
 # ECOS is free but does not support Mixed Integer Programming
 
-pkg = "ECOS"
+pkg = "GLPK"
 solver = solvers[pkg]
 
 # -----------------------------------
@@ -212,7 +213,13 @@ for justone in 1:1
 		push!(slack_col, Variable(1, Positive()))
 	end
 
-	cost = path1d_cost(mpc, x, slack_col)
+	if pkg == "GLPK"
+		# GLPK Simplex can be used to find a feasible solution in <= 4ms
+		# Could be used then as a starting point for an interior point method
+		cost = sum(slack_col)
+	else
+		cost = path1d_cost(mpc, x, slack_col)
+	end
 	#p = minimize(cost+b)
 	p = minimize(cost)
 
