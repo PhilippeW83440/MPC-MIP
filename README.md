@@ -1,5 +1,20 @@
+
+
 # AA222_Project
 Final project on Trajectory Optimization
+
+## Elastic Model for Collision Avoidance  
+Sometimes a constraint can not be satisfied, but we would like nevertheless to return a solution that minimizes deviation to our constraint. Instead of just throwing INFEASIBLE ...  
+For example, if we can not maintain a safety distance of 4 meters, then it may be OK to use 3 meters ..  
+=> Allow to violate constraints at a cost. Introduce slack variables and add them to the objective as penalty.  
+
+![\begin{split}\begin{array}{lr}   \minimize    & c^Tx, \\   \st          & a^Tx\leq b. \end{array}\end{split}](https://render.githubusercontent.com/render/math?math=%5Cbegin%7Bsplit%7D%5Cbegin%7Barray%7D%7Blr%7D%20%20%20%5Cminimize%20%20%20%20%26%20c%5ETx%2C%20%5C%5C%20%20%20%5Cst%20%20%20%20%20%20%20%20%20%20%26%20a%5ETx%5Cleq%20b.%20%5Cend%7Barray%7D%5Cend%7Bsplit%7D)
+
+which might be causing infeasibility. Then create a new variable y and form the problem which contains:
+
+![\begin{split}\begin{array}{lr} \minimize    & c^Tx+y, \\ \st          & a^Tx\leq b+y. \end{array}\end{split}](https://render.githubusercontent.com/render/math?math=%5Cbegin%7Bsplit%7D%5Cbegin%7Barray%7D%7Blr%7D%20%5Cminimize%20%20%20%20%26%20c%5ETx%2By%2C%20%5C%5C%20%5Cst%20%20%20%20%20%20%20%20%20%20%26%20a%5ETx%5Cleq%20b%2By.%20%5Cend%7Barray%7D%5Cend%7Bsplit%7D)  
+Solving this problem will reveal by how much the constraint needs to be relaxed in order to become feasible.   
+This is equivalent to inspecting the infeasibility certificate but may be more intuitive.
 
 ## Optimization Algorithms  
 * [Log Barrier with equality constraints](https://www.stat.cmu.edu/~ryantibs/convexopt/lectures/barr-method.pdf)  
