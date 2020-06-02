@@ -9,8 +9,9 @@ using ECOS
 #using OSQP
 #using GLPK
 
-#using Gurobi # License required
-#using Mosek, MosekTools # License required www.mosek.com
+using Gurobi # License required
+using Mosek, MosekTools # License required www.mosek.com
+using CPLEX # License required
 
 using LinearAlgebra
 using Plots
@@ -22,11 +23,15 @@ solvers = Dict("SCS" => ()->SCS.Optimizer(),
                "COSMO" => ()->COSMO.Optimizer(),
                "CSDP" => ()->CSDP.Optimizer(),
                "SDPA" => ()->SDPA.Optimizer(),
-               #"Gurobi" => ()->Gurobi.Optimizer(), # Fail ...
+               "CPLEX" => ()->CPLEX.Optimizer(),
+               "Gurobi" => ()->Gurobi.Optimizer(), # Fail ...
                #"OSQP" => ()->OSQP.Optimizer(), # Fail ...
                #"GLPK" => ()->GLPK.Optimizer(), # does not support QP obj
-               #"Mosek" => ()->Mosek.Optimizer(), # Fail ... TOO SLOW PROGRESS
+               "Mosek" => ()->Mosek.Optimizer(), # Fail ... TOO SLOW PROGRESS
                "ECOS" => ()->ECOS.Optimizer())
+
+# Use Mosek or ECOS: they are very fast (<20 ms and < 10 ms) and good ...
+# ECOS is free but does not support Mixed Integer Programming
 
 pkg = "ECOS"
 solver = solvers[pkg]
@@ -106,7 +111,7 @@ end
 
 
 
-function path1d_cost(mpc::MpcPath1d, x::Variable)
+function path1d_cost(mpc::MpcPath1d, x::Variable, slack_col)
 	cost = 0
 
 	# stage cost
@@ -120,10 +125,12 @@ function path1d_cost(mpc::MpcPath1d, x::Variable)
 	cost += quadform(xT - mpc.xref, mpc.Q)
 	cost /= (mpc.nvars_dt * mpc.T) # make the cost num_steps independant
 
+	cost += 1000*sum(slack_col) # Elastic Model for Collision Avoidance
+
 	return cost
 end
 
-function path1d_constraints(mpc::MpcPath1d, x::Variable, p)
+function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col)
 	# --- Equality constraints ---
 	p.constraints += [x[1] == mpc.xinit[1]]
 	p.constraints += [x[2] == mpc.xinit[2]]
@@ -150,14 +157,18 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p)
 
 	# TODO Obstacles constraints
 	# obstacle constraint (1st tests)
-	for obstacle in mpc.obstacles
+	for (i, obstacle) in enumerate(mpc.obstacles)
 		tcross, scross = obstacle
 		tcrossd = floor(Int, tcross/mpc.dt)
 		if (tcrossd >= 1) && (tcrossd <= mpc.T)
 			# if within MPC horizon
 			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
 			k = tcrossd * mpc.nvars_dt + 1
-			p.constraints += [x[k] <= scross - 1.1*mpc.dsaf]
+			#p.constraints += [x[k] <= scross - 1.1*mpc.dsaf]
+			#p.constraints += [x[k] <= scross ]
+			#p.constraints += [x[k] <= scross - 0.8*mpc.dsaf]
+			# Elastic Model for Collision Avoidance
+			p.constraints += [x[k] <= scross - 1.1*mpc.dsaf + slack_col[i]]
 		end
 	end
 
@@ -187,16 +198,25 @@ mpc = MpcPath1d()
 
 plot(title="s-t graph", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:topleft)
 
-for (pkg, solver) in solvers
+#for (pkg, solver) in solvers
+for justone in 1:1
 	global first_plot
 
 	runtime = 0
 	x = Variable(60)
 	#b = Variable(1, :Bin)
-	cost = path1d_cost(mpc, x)
+
+	# Elastic Model for Collision Avoidance: slack_col
+	slack_col = []
+	for i in 1:length(mpc.obstacles)
+		push!(slack_col, Variable(1, Positive()))
+	end
+
+	cost = path1d_cost(mpc, x, slack_col)
 	#p = minimize(cost+b)
 	p = minimize(cost)
-	path1d_constraints(mpc, x, p)
+
+	path1d_constraints(mpc, x, p, slack_col)
 	x0 = path1d_init(mpc)
 
 	for i in 1:2 # 2 times to get runtime for compiled version
@@ -211,6 +231,9 @@ for (pkg, solver) in solvers
 		println("x=", round.(x.value, digits=2))
 		runtime = convert(Int64, round(1000*runtime))
 		println("runtime=$runtime ms")
+		for (j, col) in enumerate(slack_col)
+			println("Collision avoidance constraint $j: slack_col=", round(col.value, digits=2))
+		end
 	end
 	
 	if visu_graph
@@ -241,5 +264,6 @@ for (pkg, solver) in solvers
 	end
 end
 
-visu_graph && savefig("st_graph_solvers.png")
+#visu_graph && savefig("st_graph_solvers.png")
+visu_graph && savefig("st_graph_$(pkg).png")
 
