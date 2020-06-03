@@ -39,11 +39,11 @@ function backtrack_line_search(f0, g0, c0, f, x, d, α, max_bt_iters, g_x; p=0.5
 end
 
 
-function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt_iters=10)
+function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt_iters=10, sherman=false)
 	x = x0
 	m = length(x0)
 	Id = Matrix(I, m, m)
-	Hinv = Id
+	Hinv = H = Id
 
 	x_history = []
 	push!(x_history, x)
@@ -89,7 +89,14 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 		# 3) Update Hinv
 		#den = y'⋅δ + 1e-5 # to avoid divide by 0 ...
 		den = max(1e-3, y'⋅δ)
-		Hinv = (Id - δ*y'/den) * Hinv * (Id - y*δ'/den) + δ*δ'/den 
+		if sherman # Inverse via Sherman-Morisson formula
+			Hinv = (Id - δ*y'/den) * Hinv * (Id - y*δ'/den) + δ*δ'/den 
+		else
+			den2 = max(1e-3, δ'*H*δ)
+			#H = H + y*y'/den - H*δ*δ'*H'/(δ'*H*δ + 1e-6) # Works fine as well
+			H = H + y*y'/den - H*δ*δ'*H'/den2
+			Hinv = inv(H)
+		end
 
 		x, g_x = xp, g_xp
 		push!(x_history, x)
