@@ -50,12 +50,12 @@ end
 include("simple.jl")
 include("path1d.jl")
 
-const PROBS = Dict("simple1" => (f=simple1, g=simple1_gradient, c = simple1_constraints, h = x->[], x0=simple1_init, n=2000),
-              "simple2" => (f=simple2, g=simple2_gradient, c = simple2_constraints, h = x->[], x0=simple2_init, n=2000),
-              "simple3" => (f=simple3, g=simple3_gradient, c = simple3_constraints, h = x->[], x0=simple3_init, n=2000),
-              "path1d_penalty"    => (f=path1d,  g=path1d_gradient,  c = path1d_inequality_constraints,  h = path1d_equality_constraints, x0=path1d_init, n=50000),
-              "path1d_interior1"  => (f=path1d,  g=path1d_gradient,  c = path1d_constraints,             h = x->[],                       x0=path1d_init, n=20000),
-              "path1d_interior2"  => (f=path1d,  g=path1d_gradient,  c = path1d_inequality_constraints,  h = path1d_equality_constraints, x0=path1d_init, n=20000))
+const PROBS = Dict("simple1" => (f=simple1, g=simple1_gradient, c = simple1_constraints, h = x->[], h_Ax_b = x->[], x0=simple1_init, n=2000),
+              "simple2" => (f=simple2, g=simple2_gradient, c = simple2_constraints, h = x->[], h_Ax_b = x->[], x0=simple2_init, n=2000),
+              "simple3" => (f=simple3, g=simple3_gradient, c = simple3_constraints, h = x->[], h_Ax_b = x->[], x0=simple3_init, n=2000),
+              "path1d_penalty"   => (f=path1d, g=path1d_gradient, c = path1d_inequality_constraints, h = path1d_equality_constraints, h_Ax_b = path1d_equality_constraints_Ax_b, x0=path1d_init, n=50000),
+              "path1d_interior1" => (f=path1d, g=path1d_gradient, c = path1d_constraints,            h = x->[],                       h_Ax_b = x->[],                            x0=path1d_init, n=20000),
+              "path1d_interior"  => (f=path1d, g=path1d_gradient, c = path1d_inequality_constraints, h = path1d_equality_constraints, h_Ax_b = path1d_equality_constraints_Ax_b, x0=path1d_init, n=20000))
 
 
 
@@ -108,7 +108,7 @@ for each trial and each trial's score.
 """
 function main(probname::String, repeat::Int, opt_func, seed = 42)
     prob = PROBS[probname]
-    f, g, c, h, x0, n = prob.f, prob.g, prob.c, prob.h, prob.x0, prob.n
+    f, g, c, h, h_Ax_b, x0, n = prob.f, prob.g, prob.c, prob.h, prob.h_Ax_b, prob.x0, prob.n
 
     scores = zeros(repeat)
     nevals = zeros(Int, repeat)
@@ -118,7 +118,7 @@ function main(probname::String, repeat::Int, opt_func, seed = 42)
     for i in 1:repeat
         empty!(COUNTERS) # fresh eval-count each time
         Random.seed!(seed + i)
-        optima[i] = opt_func(f, g, c, h, x0(), n, probname)
+        optima[i] = opt_func(f, g, c, h, h_Ax_b, x0(), n, probname)
         nevals[i], scores[i] = get_score(f, g, c, optima[i], n)
     end
 

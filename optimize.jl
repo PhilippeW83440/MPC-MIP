@@ -11,6 +11,7 @@ using Plots
 
 global constraints_ineq
 global constraints_eq
+global constraints_eq_Ax_b
 global nmax
 global test_num = 1
 
@@ -179,6 +180,9 @@ function p_quadratic(x)
 		end
 	end
 	h_x = constraints_eq(x)
+
+	#A, b = constraints_eq_Ax_b(x) TO DO
+
 	for i in 1:length(h_x)
 		penalty += h_x[i]^2
 	end
@@ -265,10 +269,11 @@ feas_counts = []
 scores = []
 counts = []
 
-function optimize(f, g, c, h, x0, n, prob)
+function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 	x = x0
 	global constraints_ineq = c
 	global constraints_eq = h
+	global constraints_eq_Ax_b = h_Ax_b
 	global nmax = n
 
 	x_history = []
