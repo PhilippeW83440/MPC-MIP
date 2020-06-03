@@ -163,7 +163,7 @@ end
 
 	dt = mpc.dt
 
-	ϵ = 0.25 # enlarge so we have a region to move in
+	ϵ = 1e-1
 
 	# Time Steps: 2 .. T
 	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
@@ -179,7 +179,6 @@ end
 
 		# Dynamic Constraints: Constant Acceleration Model in between 2 Time Steps
 		kp = k - mpc.nvars_dt # p for previous
-		# TODO rewrite with Ad, Bd matrix multiplication
 		push!(constraints,   x[k] - (x[kp] + dt*x[kp+1] + 0.5*dt^2*x[kp+2]) - ϵ)
 		push!(constraints, -(x[k] - (x[kp] + dt*x[kp+1] + 0.5*dt^2*x[kp+2])) - ϵ)
 
@@ -195,7 +194,8 @@ end
 			# if within MPC horizon
 			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
 			k = tcrossd * mpc.nvars_dt + 1
-			push!(constraints, (x[k] - scross + 1.1*mpc.dsaf))
+			# TODO Elastic model to handle 1.1*mpc.dsaf
+			push!(constraints, (x[k] - scross + 0.8*mpc.dsaf))
 		end
 	end
 
@@ -256,7 +256,6 @@ end
 	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
 		# Dynamic Constraints: Constant Acceleration Model in between 2 Time Steps
 		kp = k - mpc.nvars_dt # p for previous
-		# TODO rewrite with Ad, Bd matrix multiplication
 		push!(constraints,   x[k] - (x[kp] + dt*x[kp+1] + 0.5*dt^2*x[kp+2]))
 		push!(constraints,   x[k+1] - (x[kp+1] + dt*x[kp+2]))
 	end

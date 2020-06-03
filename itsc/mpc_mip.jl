@@ -34,7 +34,7 @@ solvers = Dict("SCS" => ()->SCS.Optimizer(),
 # Use Mosek or ECOS: they are very fast (<20 ms and < 10 ms) and good ...
 # ECOS is free but does not support Mixed Integer Programming
 
-pkg = "GLPK"
+pkg = "Mosek"
 solver = solvers[pkg]
 
 # -----------------------------------
@@ -169,7 +169,7 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col)
 			#p.constraints += [x[k] <= scross ]
 			#p.constraints += [x[k] <= scross - 0.8*mpc.dsaf]
 			# Elastic Model for Collision Avoidance
-			p.constraints += [x[k] <= scross - 1.1*mpc.dsaf + slack_col[i]]
+			p.constraints += [x[k] <= scross - 0.8*mpc.dsaf + slack_col[i]]
 		end
 	end
 
