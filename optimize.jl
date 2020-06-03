@@ -39,7 +39,7 @@ function backtrack_line_search(f0, g0, c0, f, x, d, α, max_bt_iters, g_x; p=0.5
 end
 
 
-function bfgs(prob, f0, g0, c0, f, x0; ϵ=1e-3, α_max=2.5, max_bt_iters=10)
+function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt_iters=10)
 	x = x0
 	m = length(x0)
 	Id = Matrix(I, m, m)
@@ -55,6 +55,10 @@ function bfgs(prob, f0, g0, c0, f, x0; ϵ=1e-3, α_max=2.5, max_bt_iters=10)
 	end
 
 	while count(f0, g0, c0) < nmax - 20 && norm(g_x) > ϵ
+
+		if feas != nothing && feas(x)
+			break # just used for the feasibility search phase
+		end
 
 		occursin("path1d", prob) && println("cost=$(f0(x)) counts=$(count(f0, g0, c0))")
 
@@ -89,64 +93,6 @@ function bfgs(prob, f0, g0, c0, f, x0; ϵ=1e-3, α_max=2.5, max_bt_iters=10)
 
 		x, g_x = xp, g_xp
 		push!(x_history, x)
-	end
-
-	return x, x_history
-end
-
-
-function bfgs_feas(prob, f0, g0, c0, f, x0, n, feas; α_max=2.5, max_bt_iters=10)
-	x = x0
-	iters = 0
-	m = length(x0)
-	Id = Matrix(I, m, m)
-	Hinv = Id
-
-	x_history = []
-	push!(x_history, x)
-
-	f_x = f(x)
-	g_x = grad(f0, g0, c0, f, x, f_x)
-	if g_x == Nothing
-		return x, x_history
-	end
-
-	while iters < n && count(f0, g0, c0) < nmax - 20 && !feas(x)
-
-		println("iters=$iters: f() = $f_x counts=$(count(f0, g0, c0))")
-
-		# 1) Compute search direction
-		d = -Hinv * g_x
-		d = d./norm(d)
-
-		#println("dsearch=$d g_x=$g_x")
-
-		# 2) Compute step size
-		α = backtrack_line_search(f0, g0, c0, f, x, d, α_max, max_bt_iters, g_x)
-		if α == Nothing
-			break
-		end
-		#println("step size α=$α")
-
-		xp = x + α .* d
-
-		f_xp = f(xp)
-		g_xp = grad(f0, g0, c0, f, xp, f_xp)
-		if g_xp == Nothing
-			break
-		end
-
-		δ = xp - x
-		y = g_xp - g_x
-
-		# 3) Update Hinv
-		#den = y'⋅δ + 1e-5 # to avoid divide by 0 ...
-		den = max(1e-3, y'⋅δ)
-		Hinv = (Id - δ*y'/den) * Hinv * (Id - y*δ'/den) + δ*δ'/den 
-
-		x, g_x, f_x = xp, g_xp, f_xp
-		push!(x_history, x)
-		iters += 1
 	end
 
 	return x, x_history
@@ -294,7 +240,7 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 		# ----------------------
 
 		# Use BFGS during feasibility search (it is much better than CG: we have a quadratic penalty)
-		x_feas, x_hist = bfgs_feas(prob, f, g, c, p_quadratic, x, 200, feasible; α_max=1.5, max_bt_iters=100)
+		x_feas, x_hist = bfgs(prob, f, g, c, p_quadratic, x; feas=feasible, α_max=1.5, max_bt_iters=100)
 		append!(x_history, x_hist)
 
 		push!(feas_scores, f(x_feas))
