@@ -54,7 +54,7 @@ const PROBS = Dict("simple1" => (f=simple1, g=simple1_gradient, c = simple1_cons
               "simple2" => (f=simple2, g=simple2_gradient, c = simple2_constraints, h = x->[], h_Ax_b = x->[], x0=simple2_init, n=2000),
               "simple3" => (f=simple3, g=simple3_gradient, c = simple3_constraints, h = x->[], h_Ax_b = x->[], x0=simple3_init, n=2000),
               "path1d_penalty"   => (f=path1d, g=path1d_gradient, c = path1d_inequality_constraints, h = path1d_equality_constraints, h_Ax_b = path1d_equality_constraints_Ax_b, x0=path1d_init, n=50000),
-              "path1d_interior1" => (f=path1d, g=path1d_gradient, c = path1d_constraints,            h = x->[],                       h_Ax_b = x->[],                            x0=path1d_init, n=20000),
+              "path1d_interior1" => (f=path1d, g=path1d_gradient, c = path1d_constraints,            h = x->[],                       h_Ax_b = x->[], x0=path1d_init, n=20000),
               "path1d_interior"  => (f=path1d, g=path1d_gradient, c = path1d_inequality_constraints, h = path1d_equality_constraints, h_Ax_b = path1d_equality_constraints_Ax_b, x0=path1d_init, n=20000))
 
 

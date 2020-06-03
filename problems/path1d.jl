@@ -265,10 +265,12 @@ end
 	return constraints
 end
 
+# Set equality constraints in the form Ax=b, for easier processing in optimize.jl
+# Dimensions: A is 40x60, x is 60x1, b is 40x1
 function path1d_equality_constraints_Ax_b(x::Vector) # the h(x)=0 function
 	# 2 initial conditions + 2 dynamics constraints (pos & speed) per Time Step
 	A = zeros(2 + (mpc.T - 1) * 2, length(x))
-	b = zeros(length(x))
+	b = zeros(size(A)[1])
 
 	A[1,1], b[1] = 1, mpc.xinit[1]
 	A[2,2], b[2] = 1, mpc.xinit[2]
@@ -280,7 +282,7 @@ function path1d_equality_constraints_Ax_b(x::Vector) # the h(x)=0 function
 	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
 		# Dynamic Constraints: Constant Acceleration Model in between 2 Time Steps
 		kp = k - mpc.nvars_dt # p for previous
-		A[row, kp:kp+mpc.nvars_dt] = [-1 -dt -0.5*dt^2 1]
+		A[row, kp:kp+mpc.nvars_dt] = [-1.0 -dt -0.5*dt^2 1]
 		A[row+1, kp+1:kp+1+mpc.nvars_dt] = [-1 -dt 0.0 1]
 		row += 2
 	end

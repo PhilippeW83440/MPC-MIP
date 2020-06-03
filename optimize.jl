@@ -179,13 +179,17 @@ function p_quadratic(x)
 			penalty += c_x[i]^2
 		end
 	end
-	h_x = constraints_eq(x)
 
-	#A, b = constraints_eq_Ax_b(x) TO DO
-
-	for i in 1:length(h_x)
-		penalty += h_x[i]^2
+	Ax_b = constraints_eq_Ax_b(x)
+	if length(Ax_b) > 0
+		A, b = Ax_b
+		penalty += sum((A*x-b).^2)
 	end
+
+	#h_x = constraints_eq(x)
+	#for i in 1:length(h_x)
+	#	penalty += h_x[i]^2
+	#end
 	return penalty
 end
 
@@ -365,7 +369,12 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 
 		savefig("plots/$(prob)_st_test$(test_num).png")
 		test_num += 1
-		println("equality constraints: $(constraints_eq(x))")
+		if length(constraints_eq_Ax_b(x)) > 0
+			A, b = constraints_eq_Ax_b(x)
+			#println("equality constraints: $(constraints_eq(x))")
+			println("equality constraints: Ax-b=$(A*x-b)")
+			println("max   equality constraint violation:$(findmax(abs.(A*x-b))) out of $(length(b))")
+		end
 		println("max inequality constraint violation:$(findmax(constraints_ineq(x))) out of $(length(constraints_ineq(x)))")
 	end
 
