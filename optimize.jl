@@ -108,7 +108,7 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 
 				if length(Ax_b) > 0
 					# Cf Book "Convex Optimization" Ch.10
-					println("Ax-b = ", norm(A*x-b))
+					#println("Ax-b = ", norm(A*x-b))
 					rowsH, colsH = size(H)
 					rowsA, colsA = size(A)
 					n = rowsH + rowsA
@@ -291,7 +291,7 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 		x = x_feas
 
 		# Interior Point Method
-		prob=="simple2" ? ρ=10 : ρ=100
+		prob=="simple2" ? ρ=10 : ρ=10#0
 		ρ_max = 1e9
 		delta = Inf
 		while count(f, g, c) < nmax - 10 && delta > 1e-5 #&& ρ < ρ_max
@@ -299,7 +299,8 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 				x_int, x_hist = bfgs(prob, f, g, c, x -> f(x) + f_barrier(x)/ρ, x; ϵ=1e-2, α_max=1.4, max_bt_iters=30)
 				ρ *= 5
 			else
-				x_int, x_hist = bfgs(prob, f, g, c, x -> f(x) + f_barrier(x)/ρ, x; ϵ=1e-2, α_max=1.4, max_bt_iters=60)
+				#x_int, x_hist = bfgs(prob, f, g, c, x -> f(x) + f_barrier(x)/ρ, x; ϵ=1e-2, α_max=1.4, max_bt_iters=60)
+				x_int, x_hist = bfgs(prob, f, g, c, x -> f(x) + f_barrier(x)/ρ, x; ϵ=1e-3, α_max=10.0, max_bt_iters=60)
 				ρ *= 10
 			end
 			#println("fint($x_int)=$(f(x_int))")

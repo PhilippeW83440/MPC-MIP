@@ -126,7 +126,7 @@ function path1d_cost(mpc::MpcPath1d, x::Variable, slack_col)
 	cost += quadform(xT - mpc.xref, mpc.Q)
 	cost /= (mpc.nvars_dt * mpc.T) # make the cost num_steps independant
 
-	cost += 1000*sum(slack_col) # Elastic Model for Collision Avoidance
+	cost += 1e2*sum(slack_col) # Elastic Model for Collision Avoidance
 
 	return cost
 end
@@ -169,7 +169,7 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col)
 			#p.constraints += [x[k] <= scross ]
 			#p.constraints += [x[k] <= scross - 0.8*mpc.dsaf]
 			# Elastic Model for Collision Avoidance
-			p.constraints += [x[k] <= scross - 0.8*mpc.dsaf + slack_col[i]]
+			p.constraints += [x[k] <= scross - 1.1*mpc.dsaf + slack_col[i]]
 		end
 	end
 

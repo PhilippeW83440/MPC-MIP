@@ -99,7 +99,7 @@ mutable struct MpcPath1d
 			  obstacles=[(2.0, 40), (3.0, 80)], # In 2 sec a crossing vehicle at s=40 m
 
 			  nvars_dt=3, # x=[s,sd] u=[sdd]
-			  slack_col=false
+			  slack_col=true
 			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt,slack_col)
 end
 
@@ -123,7 +123,7 @@ global mpc = MpcPath1d()
 
 	if mpc.slack_col
 		nobs = length(mpc.obstacles)
-		cost += 1000.0*sum((x[end-nobs+1:end]).^2)
+		cost += 1e2*sum((x[end-nobs+1:end]))
 	end
 
 	if isnan(cost)
@@ -169,8 +169,6 @@ end
 	push!(constraints, mpc.umin - x[3])
 
 	dt = mpc.dt
-
-	ϵ = 1e-1
 
 	# Time Steps: 2 .. T
 	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
