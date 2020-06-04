@@ -81,6 +81,7 @@ mutable struct MpcPath1d
 	obstacles::Array{Tuple{Float64, Float64}, 1}
 
 	nvars_dt::Int64 # Number of variables PER Time Step (2 state vars + 1 ctlr var)
+	slack_col::Bool # Number of slack variables for Elastic Model for Collision avoidance
 
 	MpcPath1d(T=20, dt=0.250,
 			  Q=Diagonal([0.2, 10]), R=Diagonal([0.001]), # Normalize <=10 the coefficients
@@ -97,8 +98,9 @@ mutable struct MpcPath1d
 			  xinit=[0.0, 20.0], # Start at s=0 with speed v=20 m.s-1
 			  obstacles=[(2.0, 40), (3.0, 80)], # In 2 sec a crossing vehicle at s=40 m
 
-			  nvars_dt=3 # x=[s,sd] u=[sdd]
-			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt)
+			  nvars_dt=3, # x=[s,sd] u=[sdd]
+			  slack_col=false
+			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt,slack_col)
 end
 
 global mpc = MpcPath1d()
@@ -118,6 +120,11 @@ global mpc = MpcPath1d()
 	xT, uT = x[end-2:end-1], [x[end]]
 	cost += (xT - mpc.xref)' * mpc.Q * (xT - mpc.xref)
 	cost /= (mpc.nvars_dt * mpc.T) # make the cost num_steps independant
+
+	if mpc.slack_col
+		nobs = length(mpc.obstacles)
+		cost += 1000.0*sum((x[end-nobs+1:end]).^2)
+	end
 
 	if isnan(cost)
 		println(cost)
@@ -187,15 +194,25 @@ end
 	end
 
 	# obstacle constraint (1st tests)
-	for obstacle in mpc.obstacles
+	nobs = length(mpc.obstacles)
+	for (i, obstacle) in enumerate(mpc.obstacles)
+		if mpc.slack_col
+			push!(constraints, -x[end-nobs+i]) # slack_col >= 0
+			push!(constraints, x[end-nobs+i] - 5.0) # slack_col <= 5
+		end
 		tcross, scross = obstacle
 		tcrossd = floor(Int, tcross/mpc.dt)
 		if (tcrossd >= 1) && (tcrossd <= mpc.T)
 			# if within MPC horizon
 			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
 			k = tcrossd * mpc.nvars_dt + 1
-			# TODO Elastic model to handle 1.1*mpc.dsaf
-			push!(constraints, (x[k] - scross + 0.8*mpc.dsaf))
+			# Elastic model for Collision Avoidance
+			# x[k] <= scross - 1.1*mpc.dsaf + slack_col
+			if mpc.slack_col
+				push!(constraints, (x[k] - scross + 1.1*mpc.dsaf -x[end-nobs+i]))
+			else
+				push!(constraints, (x[k] - scross + 0.8*mpc.dsaf))
+			end
 		end
 	end
 
@@ -228,14 +245,25 @@ end
 	end
 
 	# obstacle constraint (1st tests)
-	for obstacle in mpc.obstacles
+	nobs = length(mpc.obstacles)
+	for (i, obstacle) in enumerate(mpc.obstacles)
+		if mpc.slack_col
+			push!(constraints, -x[end-nobs+i]) # slack_col >= 0
+			push!(constraints, x[end-nobs+i] - 5.0) # slack_col <= 5
+		end
 		tcross, scross = obstacle
 		tcrossd = floor(Int, tcross/mpc.dt)
 		if (tcrossd >= 1) && (tcrossd <= mpc.T)
 			# if within MPC horizon
 			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
 			k = tcrossd * mpc.nvars_dt + 1
-			push!(constraints, (x[k] - scross + 1.1*mpc.dsaf))
+			# Elastic model for Collision Avoidance
+			# x[k] <= scross - 1.1*mpc.dsaf + slack_col
+			if mpc.slack_col
+				push!(constraints, (x[k] - scross + 1.1*mpc.dsaf -x[end-nobs+i]))
+			else
+				push!(constraints, (x[k] - scross + 0.8*mpc.dsaf))
+			end
 		end
 	end
 
@@ -295,7 +323,13 @@ function path1d_init()
 	# Start with a simple but dynamically feasible and comfortable trajectory
 	# Constant speed from starting point
 
-	x = zeros(mpc.T * mpc.nvars_dt)
+	if mpc.slack_col
+		nobs = length(mpc.obstacles)
+		# + nobs slack variables for Elastic Model for Obsracles Avoidance
+		x = zeros(mpc.T * mpc.nvars_dt + nobs)
+	else
+		x = zeros(mpc.T * mpc.nvars_dt)
+	end
 	v = mpc.xinit[2]
 
 	# Time Step: 1

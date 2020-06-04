@@ -338,6 +338,10 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 			println("max   equality constraint violation:$(findmax(abs.(A*x-b))) out of $(length(b))")
 		end
 		println("max inequality constraint violation:$(findmax(constraints_ineq(x))) out of $(length(constraints_ineq(x)))")
+		if mpc.slack_col
+			nobs = length(mpc.obstacles)
+			println("Collision avoidance constraint: slack_col=", round.(x[end-nobs+1:end], digits=2))
+		end
 	end
 
     return x
