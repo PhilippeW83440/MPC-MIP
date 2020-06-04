@@ -54,6 +54,12 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 		return x, x_history
 	end
 
+	Ax_b = constraints_eq_Ax_b(x)
+	if length(Ax_b) > 0
+		A, b = Ax_b
+		ATinv = A'
+	end
+
 	while count(f0, g0, c0) < nmax - 20 && norm(g_x) > ϵ
 
 		if feas != nothing && feas(x)
@@ -64,6 +70,9 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 
 		# 1) Compute search direction
 		d = -Hinv * g_x
+		if length(Ax_b) > 0
+			d -= ATinv*(A*x-b) # cf Stephen Boyd book p.532
+		end
 		d = d./norm(d)
 
 		#println("dsearch=$d g_x=$g_x")
@@ -94,9 +103,25 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 				Hinv = (Id - δ*y'/den) * Hinv * (Id - y*δ'/den) + δ*δ'/den 
 			else
 				den2 = max(1e-3, δ'*H*δ)
-				#H = H + y*y'/den - H*δ*δ'*H'/(δ'*H*δ + 1e-6) # Works fine as well
 				H = H + y*y'/den - H*δ*δ'*H'/den2
-				Hinv = inv(H)
+				#H = H + y*y'/den - H*δ*δ'*H'/(δ'*H*δ + 1e-6) # Works fine as well
+
+				if length(Ax_b) > 0
+					# Cf Book "Convex Optimization" Ch.10
+					println("Ax-b = ", norm(A*x-b))
+					rowsH, colsH = size(H)
+					rowsA, colsA = size(A)
+					n = rowsH + rowsA
+					Heq = zeros(n, n)
+					Heq[1:rowsH, 1:colsH] = H
+					Heq[rowsH+1:end, 1:colsA] = A
+					Heq[1:colsA, colsH+1:end] = A'
+					Heq_inv = inv(Heq)
+					Hinv = Heq_inv[1:rowsH, 1:colsH]
+					ATinv = Heq_inv[1:colsA, colsH+1:end]
+				else
+					Hinv = inv(H)
+				end
 			end
 		elseif method == "broyden"
 			den = max(1e-4, δ⋅δ')
