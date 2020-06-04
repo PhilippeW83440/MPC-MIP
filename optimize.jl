@@ -60,7 +60,11 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 		ATinv = A'
 	end
 
+	iter = 1
+
 	while count(f0, g0, c0) < nmax - 20 && norm(g_x) > ϵ
+
+		t1 = time_ns()
 
 		if feas != nothing && feas(x)
 			break # just used for the feasibility search phase
@@ -78,7 +82,7 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 		#println("dsearch=$d g_x=$g_x")
 
 		# 2) Compute step size
-		α = backtrack_line_search(f0, g0, c0, f, x, d, α_max, max_bt_iters, g_x)
+		bttime = @elapsed α = backtrack_line_search(f0, g0, c0, f, x, d, α_max, max_bt_iters, g_x)
 		if α == Nothing
 			break
 		end
@@ -87,7 +91,7 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 		xp = x + α .* d
 
 		f_xp = f(xp)
-		g_xp = grad(f0, g0, c0, f, xp, f_xp)
+		gradtime = @elapsed g_xp = grad(f0, g0, c0, f, xp, f_xp)
 		if g_xp == Nothing
 			break
 		end
@@ -116,7 +120,7 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 					Heq[1:rowsH, 1:colsH] = H
 					Heq[rowsH+1:end, 1:colsA] = A
 					Heq[1:colsA, colsH+1:end] = A'
-					Heq_inv = inv(Heq)
+					invtime = @elapsed Heq_inv = inv(Heq)
 					Hinv = Heq_inv[1:rowsH, 1:colsH]
 					ATinv = Heq_inv[1:colsA, colsH+1:end]
 				else
@@ -134,6 +138,11 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 
 		x, g_x = xp, g_xp
 		push!(x_history, x)
+
+		t2 = time_ns()
+
+		println("Iter $(iter) BFGS=$((t2-t1)/1.0e6) ms: INV=$(invtime*1000) ms, BT=$(bttime*1000) ms, GRAD=$(gradtime*1000) ms")
+		iter += 1
 	end
 
 	return x, x_history
