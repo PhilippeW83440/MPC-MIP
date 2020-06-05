@@ -1,1 +1,4 @@
+# You may have to set it to 4 on a different machine
+export JULIA_NUM_THREADS=8
+
 julia localtest.jl path1d_interior 1
