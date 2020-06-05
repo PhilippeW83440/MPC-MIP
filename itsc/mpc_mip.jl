@@ -105,6 +105,7 @@ mutable struct MpcPath1d
 			  uref=[0.0],
 			  xinit=[0.0, 20.0], # Start at s=0 with speed v=20 m.s-1
 			  obstacles=[(2.0, 40), (3.0, 80)], # In 2 sec a crossing vehicle at s=40 m
+			  #obstacles=[(2.0, 35), (3.0, 65)], # In 2 sec a crossing vehicle at s=40 m
 
 			  nvars_dt=3 # x=[s,sd] u=[sdd]
 			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt)
@@ -131,7 +132,7 @@ function path1d_cost(mpc::MpcPath1d, x::Variable, slack_col)
 	return cost
 end
 
-function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col)
+function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin)
 	# --- Equality constraints ---
 	p.constraints += [x[1] == mpc.xinit[1]]
 	p.constraints += [x[2] == mpc.xinit[2]]
@@ -156,8 +157,10 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col)
 		p.constraints += [mpc.umin <= x[k+2], x[k+2] <= mpc.umax]
 	end
 
-	# TODO Obstacles constraints
-	# obstacle constraint (1st tests)
+	# Handle obstacle constraint: Elastic Model + Disjunctive Constraints
+	M = 1e4
+	dsaf = 1.1 * mpc.dsaf
+
 	for (i, obstacle) in enumerate(mpc.obstacles)
 		tcross, scross = obstacle
 		tcrossd = floor(Int, tcross/mpc.dt)
@@ -165,11 +168,13 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col)
 			# if within MPC horizon
 			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
 			k = tcrossd * mpc.nvars_dt + 1
-			#p.constraints += [x[k] <= scross - 1.1*mpc.dsaf]
-			#p.constraints += [x[k] <= scross ]
-			#p.constraints += [x[k] <= scross - 0.8*mpc.dsaf]
+
 			# Elastic Model for Collision Avoidance
-			p.constraints += [x[k] <= scross - 1.1*mpc.dsaf + slack_col[i]]
+			#p.constraints += [x[k] <= scross - dsaf + slack_col[i]]
+
+			p.constraints += [x[k] <= scross - dsaf + slack_col[i] + M * slack_bin[i]]
+			p.constraints += [scross + dsaf - slack_col[i] <= x[k] + M * (1 - slack_bin[i]) ]
+			p.constraints += [0 <= slack_col[i], slack_col[i] <= dsaf]
 		end
 	end
 
@@ -209,8 +214,10 @@ for justone in 1:1
 
 	# Elastic Model for Collision Avoidance: slack_col
 	slack_col = []
+	slack_bin = []
 	for i in 1:length(mpc.obstacles)
 		push!(slack_col, Variable(1, Positive()))
+		push!(slack_bin, Variable(1, :Bin))
 	end
 
 	if pkg == "GLPK"
@@ -223,7 +230,7 @@ for justone in 1:1
 	#p = minimize(cost+b)
 	p = minimize(cost)
 
-	path1d_constraints(mpc, x, p, slack_col)
+	path1d_constraints(mpc, x, p, slack_col, slack_bin)
 	x0 = path1d_init(mpc)
 
 	for i in 1:2 # 2 times to get runtime for compiled version
@@ -240,6 +247,7 @@ for justone in 1:1
 		println("runtime=$runtime ms")
 		for (j, col) in enumerate(slack_col)
 			println("Collision avoidance constraint $j: slack_col=", round(col.value, digits=2))
+			println("Collision avoidance        bin $j: slack_bin=", round(slack_bin[i].value, digits=2))
 		end
 	end
 	
