@@ -281,6 +281,8 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 
 	x_history = []
 
+	t1 = time_ns()
+
 	if occursin("penalty", prob)
 		# ----------------
 		# Penalty Method
@@ -298,7 +300,7 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 
 		push!(feas_scores, f(x_feas))
 		push!(feas_counts, count(f,g,c))
-		println("mean: feasibility score = $(mean(feas_scores)), count=$(mean(feas_counts))")
+		println("=======================> mean: feasibility score = $(mean(feas_scores)), count=$(mean(feas_counts))")
 
 		x = x_feas
 
@@ -323,6 +325,10 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 		end
 		println("max rho = $ρ")
 	end
+
+	t2 = time_ns()
+	println("runtime = $((t2-t1)/1e9)")
+
 
 	push!(scores, f(x))
 	push!(counts, count(f,g,c))
