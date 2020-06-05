@@ -1,34 +1,34 @@
 using Convex
+using Mosek, MosekTools # License required www.mosek.com
+using LinearAlgebra
 
-using SCS
-using COSMO
-using CSDP
-using SDPA
+using GLPK
 using ECOS
 
-using OSQP
-using GLPK
+#using SCS
+#using COSMO
+#using CSDP
+#using SDPA
+#using OSQP
+#
+#using Gurobi # License required
+#using CPLEX # License required
 
-using Gurobi # License required
-using Mosek, MosekTools # License required www.mosek.com
-using CPLEX # License required
-
-using LinearAlgebra
 using Plots
 
+testu = false
 visu_graph = true
 first_plot = true
 
-solvers = Dict("SCS" => ()->SCS.Optimizer(), 
-               "COSMO" => ()->COSMO.Optimizer(),
-               "CSDP" => ()->CSDP.Optimizer(),
-               "SDPA" => ()->SDPA.Optimizer(),
-               "CPLEX" => ()->CPLEX.Optimizer(),
-               "Gurobi" => ()->Gurobi.Optimizer(),
-               "OSQP" => ()->OSQP.Optimizer(),
+solvers = Dict("Mosek" => ()->Mosek.Optimizer(),
                "GLPK" => ()->GLPK.Optimizer(method = GLPK.SIMPLEX), # does not support QP obj
-               #"GLPK" => ()->GLPK.Optimizer(method = GLPK.INTERIOR), # does not support QP obj
-               "Mosek" => ()->Mosek.Optimizer(),
+               #"SCS" => ()->SCS.Optimizer(), 
+               #"COSMO" => ()->COSMO.Optimizer(),
+               #"CSDP" => ()->CSDP.Optimizer(),
+               #"SDPA" => ()->SDPA.Optimizer(),
+               #"CPLEX" => ()->CPLEX.Optimizer(),
+               #"Gurobi" => ()->Gurobi.Optimizer(),
+               #"OSQP" => ()->OSQP.Optimizer(),
                "ECOS" => ()->ECOS.Optimizer())
 
 # Use Mosek or ECOS: they are very fast (<20 ms and < 10 ms) and good ...
@@ -198,87 +198,104 @@ function path1d_init(mpc::MpcPath1d)
 	return x0
 end
 
-
 mpc = MpcPath1d()
 
 
-plot(title="s-t graph", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:topleft)
 
-#for (pkg, solver) in solvers
-for justone in 1:1
-	global first_plot
-
-	runtime = 0
-	x = Variable(60)
-	#b = Variable(1, :Bin)
-
-	# Elastic Model for Collision Avoidance: slack_col
-	slack_col = []
-	slack_bin = []
-	for i in 1:length(mpc.obstacles)
-		push!(slack_col, Variable(1, Positive()))
-		push!(slack_bin, Variable(1, :Bin))
-	end
-
-	if pkg == "GLPK"
-		# GLPK Simplex can be used to find a feasible solution in <= 4ms
-		# Could be used then as a starting point for an interior point method
-		cost = sum(slack_col)
-	else
-		cost = path1d_cost(mpc, x, slack_col)
-	end
-	#p = minimize(cost+b)
-	p = minimize(cost)
-
-	path1d_constraints(mpc, x, p, slack_col, slack_bin)
-	x0 = path1d_init(mpc)
-
-	for i in 1:2 # 2 times to get runtime for compiled version
-		println("start solver...")
-		x.value = x0
-		println("x0=$x0")
-	
-		runtime = @elapsed solve!(p, solver, warmstart=true)
-	
-		println("status=", p.status)
-		println("cost=", round(p.optval, digits=2))
-		println("x=", round.(x.value, digits=2))
-		runtime = convert(Int64, round(1000*runtime))
-		println("runtime=$runtime ms")
-		for (j, col) in enumerate(slack_col)
-			println("Collision avoidance constraint $j: slack_col=", round(col.value, digits=2))
-			println("Collision avoidance        bin $j: slack_bin=", round(slack_bin[i].value, digits=2))
-		end
-	end
-	
-	if visu_graph
-		function circleShape(t, s, Δt, Δs)
-			θ = LinRange(0, 2*π, 500)
-			t .+ Δt*sin.(θ), s .+ Δs*cos.(θ)
-		end
-	
-		x = x.value
-	
-		s = [x[i] for i in (1:3:length(x))]
-		t = collect((1:length(s))) .- 1
-		t = t .* mpc.dt
-	
-		plot!(t, s, label="$(pkg) path ($runtime ms)", marker=2)
-	
-		if first_plot
-			for (i, obs) in enumerate(mpc.obstacles)
-				tt, s = obs
-				plot!(circleShape(tt, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
-			end
-	
-			s = [x0[i] for i in (1:3:length(x0))]
-			plot!(t, s, label="initial path", marker=2)
-			first_plot = false
-		end
-	
-	end
+# Hooks for scn.jl
+# -------------------------------------------------------------------------
+function mpc_mip()
+	return mpc
 end
 
-#visu_graph && savefig("st_graph_solvers.png")
-visu_graph && savefig("st_graph_$(pkg).png")
+function act(mpc::MpcPath1d, state::Array{Float64}, obstacles::Array{Tuple{Float64, Float64}, 1})::Float64
+	# TODO ...
+	println("TODO...")
+	return 0.0
+end
+
+# -------------------------------------------------------------------------
+
+
+if testu
+	plot(title="s-t graph", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:topleft)
+	
+	#for (pkg, solver) in solvers
+	for justone in 1:1
+		global first_plot
+	
+		runtime = 0
+		x = Variable(60)
+		#b = Variable(1, :Bin)
+	
+		# Elastic Model for Collision Avoidance: slack_col
+		slack_col = []
+		slack_bin = []
+		for i in 1:length(mpc.obstacles)
+			push!(slack_col, Variable(1, Positive()))
+			push!(slack_bin, Variable(1, :Bin))
+		end
+	
+		if pkg == "GLPK"
+			# GLPK Simplex can be used to find a feasible solution in <= 4ms
+			# Could be used then as a starting point for an interior point method
+			cost = sum(slack_col)
+		else
+			cost = path1d_cost(mpc, x, slack_col)
+		end
+		#p = minimize(cost+b)
+		p = minimize(cost)
+	
+		path1d_constraints(mpc, x, p, slack_col, slack_bin)
+		x0 = path1d_init(mpc)
+	
+		for i in 1:2 # 2 times to get runtime for compiled version
+			println("start solver...")
+			x.value = x0
+			println("x0=$x0")
+		
+			runtime = @elapsed solve!(p, solver, warmstart=true)
+		
+			println("status=", p.status)
+			println("cost=", round(p.optval, digits=2))
+			println("x=", round.(x.value, digits=2))
+			runtime = convert(Int64, round(1000*runtime))
+			println("runtime=$runtime ms")
+			for (j, col) in enumerate(slack_col)
+				println("Collision avoidance constraint $j: slack_col=", round(col.value, digits=2))
+				println("Collision avoidance        bin $j: slack_bin=", round(slack_bin[i].value, digits=2))
+			end
+		end
+		
+		if visu_graph
+			function circleShape(t, s, Δt, Δs)
+				θ = LinRange(0, 2*π, 500)
+				t .+ Δt*sin.(θ), s .+ Δs*cos.(θ)
+			end
+		
+			x = x.value
+		
+			s = [x[i] for i in (1:3:length(x))]
+			t = collect((1:length(s))) .- 1
+			t = t .* mpc.dt
+		
+			plot!(t, s, label="$(pkg) path ($runtime ms)", marker=2)
+		
+			if first_plot
+				for (i, obs) in enumerate(mpc.obstacles)
+					tt, s = obs
+					plot!(circleShape(tt, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
+				end
+		
+				s = [x0[i] for i in (1:3:length(x0))]
+				plot!(t, s, label="initial path", marker=2)
+				first_plot = false
+			end
+		
+		end
+	end
+	
+	#visu_graph && savefig("st_graph_solvers.png")
+	visu_graph && savefig("st_graph_$(pkg).png")
+end
 
