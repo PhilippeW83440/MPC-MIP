@@ -124,7 +124,7 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 					Hinv = Heq_inv[1:rowsH, 1:colsH]
 					ATinv = Heq_inv[1:colsA, colsH+1:end]
 				else
-					Hinv = inv(H)
+					invtime = @elapsed Hinv = inv(H)
 				end
 			end
 		elseif method == "broyden"
