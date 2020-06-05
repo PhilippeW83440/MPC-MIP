@@ -149,19 +149,22 @@ function bfgs(prob, f0, g0, c0, f, x0; feas=nothing, ϵ=1e-4, α_max=2.5, max_bt
 end
 
 
-function grad(f0, g0, c0, f, x, f_x; h=sqrt(eps(Float64)))
+function grad(f0, g0, c0, f, x, f_x; h=sqrt(eps(Float64)), T=Threads.nthreads())
 #function grad(f0, g0, c0, f, x, f_x; h=cbrt(eps(Float64)))
 	n = length(x)
 	gradient = zeros(n)
 
-	for i in 1:n
-		u = zeros(n)
-		u[i] = 1
-		if count(f0, g0, c0) > nmax-5
-			return Nothing
+	Threads.@threads for t in 1:T
+		#for i in 1:n
+		for i in t:T:n
+			u = zeros(n)
+			u[i] = 1
+			if count(f0, g0, c0) > nmax-5
+				return Nothing
+			end
+			gradient[i] = (f(x+h*u)-f_x) / h
+			#gradient[i] = (f(x+0.5*h*u)-f(x-0.5*h*u)) / h
 		end
-		gradient[i] = (f(x+h*u)-f_x) / h
-		#gradient[i] = (f(x+0.5*h*u)-f(x-0.5*h*u)) / h
 	end
 	#println("gradient=$gradient")
 	return gradient
