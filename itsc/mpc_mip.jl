@@ -16,7 +16,7 @@ using ECOS
 
 using Plots
 
-testu = true
+testu = false
 first_plot = true
 
 solvers = Dict("Mosek" => ()->Mosek.Optimizer(),
@@ -133,6 +133,8 @@ end
 
 function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin)
 
+	# ------------ Constraints that are fixed once for all ----------------
+
 	dt = mpc.dt
 	# Time Steps: 2 .. T Dynamics Cosntraints
 	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
@@ -154,6 +156,11 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin
 
 	#println("BEFORE: ", length(p.constraints))
 
+	# ------------ Constraints that can be changed on the fly ----------------
+
+	# Order matters !!! comply to a LIFO
+	# https://docs.mosek.com/9.2/capi/guidelines-optimizer.html?highlight=lifo
+
 	# Handle obstacle constraint: Elastic Model + Disjunctive Constraints
 	M = 1e4
 	dsaf = 1.1 * mpc.dsaf
@@ -172,12 +179,6 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin
 			p.constraints += [0 <= slack_col[i], slack_col[i] <= dsaf]
 		end
 	end
-
-	#println("AFTER: ", length(p.constraints))
-	#for i in 1:8
-	#	pop!(p.constraints)
-	#end
-	#println("AFTER AFTER: ", length(p.constraints))
 
 	# --- Equality constraints ---
 	p.constraints += [x[1] == mpc.xinit[1]]
@@ -306,7 +307,35 @@ end
 # -------------------------------------------------------------------------
 function mpc_mip()
 	mpc = MpcPath1d()
-	mpc.solv = SolverData(mpc)
+	solv = SolverData(mpc)
+	mpc.solv = solv
+
+	# First run (fake one to enable warmstart then)
+	x0 = path1d_init(mpc)
+	solv.x.value = x0
+	solve!(solv.p, solver, warmstart=true)
+	dump_sol(solv)
+
+	p = solv.p
+	println("#constraints = ", length(p.constraints))
+
+	# 2 initial conditions constraints to delete (new ones needed at each act() call)
+	pop!(p.constraints) # p.constraints += [x[1] == mpc.xinit[1]]
+	pop!(p.constraints) # p.constraints += [x[2] == mpc.xinit[2]]
+
+	for i in 1:length(mpc.obstacles)
+		# 4 constraints per obstacle to delete (new ones needed at each act() call)
+		#p.constraints += [x[k] <= scross - dsaf + slack_col[i] + M * slack_bin[i]]
+		#p.constraints += [scross + dsaf - slack_col[i] <= x[k] + M * (1 - slack_bin[i]) ]
+		#p.constraints += [0 <= slack_col[i], slack_col[i] <= dsaf]
+		for j in 1:4
+			pop!(p.constraints)
+		end
+	end
+
+	println("#constraints = ", length(p.constraints))
+	exit(1) # act() code to be completed
+
 	return mpc
 end
 
