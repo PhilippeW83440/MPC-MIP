@@ -5,6 +5,11 @@ using LinearAlgebra
 using GLPK
 using ECOS
 
+# mpc_mip solves 96% of the tests like UCS/DP (ie all the feasible tests) with a runtime below 30 ms while UCS is at 5.85 sec
+
+# [ Info: METRICS mean values => score -0.09226999999999999, success_rate 0.96, runtime 0.022289628451650213, hardbrakes 0.19, steps_to_goal 53.791666666666664, steps_to_collision 12.0, speed_at_collision 18.738300162852916
+
+
 #using SCS
 #using COSMO
 #using CSDP

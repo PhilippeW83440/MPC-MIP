@@ -156,7 +156,8 @@ if algo == "mcts"
 	print(agent.mdp)
 elseif algo == "mpc_mip"
 	agent = mpc_mip()
-	println("mpc mip agent: ", agent)
+	println("mpc_mip agent")
+	#println("mpc mip agent: ", agent)
 elseif algo == "mpc"
 	mdlParams = MdlParams()
 	mpcParams = MpcParams()
