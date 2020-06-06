@@ -16,7 +16,7 @@ using ECOS
 
 using Plots
 
-visu_graph = true
+testu = true
 first_plot = true
 
 solvers = Dict("Mosek" => ()->Mosek.Optimizer(),
@@ -90,6 +90,8 @@ mutable struct MpcPath1d
 
 	nvars_dt::Int64 # Number of variables PER Time Step (2 state vars + 1 ctlr var)
 
+	solv
+
 	MpcPath1d(T=20, dt=0.250,
 			  Q=Diagonal([0.2, 10]), R=Diagonal([0.001]), # Normalize <=10 the coefficients
 			  smin=0.0, smax=1000.0,
@@ -106,15 +108,14 @@ mutable struct MpcPath1d
 			  obstacles=[(2.0, 40), (3.0, 80)], # In 2 sec a crossing vehicle at s=40 m
 			  #obstacles=[(2.0, 35), (3.0, 65)], # In 2 sec a crossing vehicle at s=40 m
 
-			  nvars_dt=3 # x=[s,sd] u=[sdd]
-			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt)
+			  nvars_dt=3, # x=[s,sd] u=[sdd]
+			  solv=Nothing
+			  ) = new(T,dt,Q,R,smin,smax,vmin,vmax,umin,umax,dsaf,Ad,Bd,xref,uref,xinit,obstacles,nvars_dt,solv)
 end
-
 
 
 function path1d_cost(mpc::MpcPath1d, x::Variable, slack_col)
 	cost = 0
-
 	# stage cost
 	for k in range(1, step=mpc.nvars_dt, length=mpc.T-1)
 		xk, uk = x[k:k+1], x[k+2]
@@ -127,14 +128,12 @@ function path1d_cost(mpc::MpcPath1d, x::Variable, slack_col)
 	cost /= (mpc.nvars_dt * mpc.T) # make the cost num_steps independant
 
 	cost += 1e2*sum(slack_col) # Elastic Model for Collision Avoidance
-
 	return cost
 end
 
 function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin)
 
 	dt = mpc.dt
-
 	# Time Steps: 2 .. T Dynamics Cosntraints
 	for k in range(1+mpc.nvars_dt, step=mpc.nvars_dt, length=mpc.T-1)
 		# Dynamic Constraints: Constant Acceleration Model in between 2 Time Steps
@@ -153,12 +152,11 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin
 		p.constraints += [mpc.umin <= x[k+2], x[k+2] <= mpc.umax]
 	end
 
+	#println("BEFORE: ", length(p.constraints))
+
 	# Handle obstacle constraint: Elastic Model + Disjunctive Constraints
 	M = 1e4
 	dsaf = 1.1 * mpc.dsaf
-
-	#println("BEFORE: ", length(p.constraints))
-
 	for (i, obstacle) in enumerate(mpc.obstacles)
 		tcross, scross = obstacle
 		tcrossd = floor(Int, tcross/mpc.dt)
@@ -169,7 +167,6 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin
 
 			# Elastic Model for Collision Avoidance
 			#p.constraints += [x[k] <= scross - dsaf + slack_col[i]]
-
 			p.constraints += [x[k] <= scross - dsaf + slack_col[i] + M * slack_bin[i]]
 			p.constraints += [scross + dsaf - slack_col[i] <= x[k] + M * (1 - slack_bin[i]) ]
 			p.constraints += [0 <= slack_col[i], slack_col[i] <= dsaf]
@@ -185,11 +182,9 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin
 	# --- Equality constraints ---
 	p.constraints += [x[1] == mpc.xinit[1]]
 	p.constraints += [x[2] == mpc.xinit[2]]
-
 end
 
 function path1d_init(mpc::MpcPath1d)
-
 	x0 = zeros(mpc.T * mpc.nvars_dt)
 	v = mpc.xinit[2]
 
@@ -202,129 +197,116 @@ function path1d_init(mpc::MpcPath1d)
 		x0[k+1] = v
 		x0[k+2] = 0
 	end
-
 	return x0
 end
 
 
 mutable struct SolverData
 	x::Variable
-	slack_col::Vector{Variable}
-	slack_bin::Vector{Variable}
+	# Slack Variables for Collision Avoidance
+	slack_col::Vector{Variable} # Elastic Model
+	slack_bin::Vector{Variable} # Disjunctive Constraints
 	p::Problem{Float64}
 
 	function SolverData(mpc)
 		s = new()
 
 		s.x = Variable(60)
-		# Elastic Model for Collision Avoidance: slack_col
 		s.slack_col, s.slack_bin = [], []
 		for i in 1:length(mpc.obstacles)
 			push!(s.slack_col, Variable(1, Positive()))
 			push!(s.slack_bin, Variable(1, :Bin))
 		end
 
-		cost = path1d_cost(mpc, s.x, s.slack_col)
+		# GLPK Simplex can be used to find a feasible solution in <= 4ms
+		# Could be used then as a starting point for an interior point method
+		pkg == "GLPK" ? cost = sum(s.slack_col) : cost = path1d_cost(mpc, s.x, s.slack_col)
 		s.p = minimize(cost)
-
 		path1d_constraints(mpc, s.x, s.p, s.slack_col, s.slack_bin)
 
 		return s
 	end
 end
 
+# Dump solution found (text)
+function dump_sol(solv::SolverData)
+	println("status=", solv.p.status)
+	println("cost=", round(solv.p.optval, digits=2))
+	println("x=", round.(solv.x.value, digits=2))
+	for (j, col) in enumerate(solv.slack_col)
+		println("Collision avoidance constraint $j: slack_col=", round(col.value, digits=2))
+		println("Collision avoidance        bin $j: slack_bin=", solv.slack_bin[j].value)
+	end
+end
 
-# ------------- Main --------------------
-
-mpc = MpcPath1d()
-solv = SolverData(mpc)
-
-
-visu_graph && plot(title="s-t graph", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:topleft)
-
-#for (pkg, solver) in solvers
-for justone in 1:1
+# Dump solution found (graph)
+function dump_graph(x0::Vector{Float64}, solv::SolverData, mpc::MpcPath1d, runtime::Int64)
+	function circleShape(t, s, Δt, Δs)
+		θ = LinRange(0, 2*π, 500)
+		t .+ Δt*sin.(θ), s .+ Δs*cos.(θ)
+	end
+	
 	global first_plot
-
-	runtime = 0
-	x = Variable(60)
-	#b = Variable(1, :Bin)
-
-	# Elastic Model for Collision Avoidance: slack_col
-	slack_col, slack_bin = [], []
-	for i in 1:length(mpc.obstacles)
-		push!(slack_col, Variable(1, Positive()))
-		push!(slack_bin, Variable(1, :Bin))
-	end
-
-	if pkg == "GLPK"
-		# GLPK Simplex can be used to find a feasible solution in <= 4ms
-		# Could be used then as a starting point for an interior point method
-		cost = sum(slack_col)
-	else
-		cost = path1d_cost(mpc, x, slack_col)
-	end
-	#p = minimize(cost+b)
-	p = minimize(cost)
-
-	path1d_constraints(mpc, x, p, slack_col, slack_bin)
-	x0 = path1d_init(mpc)
-
-	for i in 1:2 # 2 times to get runtime for compiled version
-		println("start solver...")
-		x.value = x0
-		println("x0=$x0")
+	x = solv.x.value
 	
-		runtime = @elapsed solve!(p, solver, warmstart=true)
+	s = [x[i] for i in (1:3:length(x))]
+	t = collect((1:length(s))) .- 1
+	t = t .* mpc.dt
 	
-		println("status=", p.status)
-		println("cost=", round(p.optval, digits=2))
-		println("x=", round.(x.value, digits=2))
-		runtime = convert(Int64, round(1000*runtime))
-		println("runtime=$runtime ms")
-		for (j, col) in enumerate(slack_col)
-			println("Collision avoidance constraint $j: slack_col=", round(col.value, digits=2))
-			println("Collision avoidance        bin $j: slack_bin=", slack_bin[j].value)
-		end
-	end
+	plot!(t, s, label="$(pkg) path ($runtime ms)", marker=2)
 	
-	if visu_graph
-		function circleShape(t, s, Δt, Δs)
-			θ = LinRange(0, 2*π, 500)
-			t .+ Δt*sin.(θ), s .+ Δs*cos.(θ)
+	if first_plot
+		for (i, obs) in enumerate(mpc.obstacles)
+			tt, s = obs
+			plot!(circleShape(tt, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
 		end
 	
-		x = x.value
-	
-		s = [x[i] for i in (1:3:length(x))]
-		t = collect((1:length(s))) .- 1
-		t = t .* mpc.dt
-	
-		plot!(t, s, label="$(pkg) path ($runtime ms)", marker=2)
-	
-		if first_plot
-			for (i, obs) in enumerate(mpc.obstacles)
-				tt, s = obs
-				plot!(circleShape(tt, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
-			end
-	
-			s = [x0[i] for i in (1:3:length(x0))]
-			plot!(t, s, label="initial path", marker=2)
-			first_plot = false
-		end
-	
+		s = [x0[i] for i in (1:3:length(x0))]
+		plot!(t, s, label="initial path", marker=2)
+		first_plot = false
 	end
 
 end
 
-#visu_graph && savefig("st_graph_solvers.png")
-visu_graph && savefig("st_graph_$(pkg).png")
 
+# ------------- Main for unitary tests --------------------
+
+if testu
+	mpc = MpcPath1d()
+	solv = SolverData(mpc)
+	
+	plot(title="s-t graph", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:topleft)
+	
+	#for (pkg, solver) in solvers
+	for justone in 1:1
+		x0 = path1d_init(mpc)
+		runtime = 0
+	
+		for i in 1:2 # 2 times to get runtime for compiled version
+			println("start solver...")
+			solv.x.value = x0
+			println("x0=$x0")
+		
+			runtime = @elapsed solve!(solv.p, solver, warmstart=true)
+			runtime = convert(Int64, round(1000*runtime))
+			println("runtime=$runtime ms")
+	
+			dump_sol(solv)
+		end
+		
+		dump_graph(x0, solv, mpc, runtime)
+	end
+	
+	#savefig("st_graph_solvers.png")
+	savefig("st_graph_$(pkg).png")
+end
 
 
 # Hooks for scn.jl
 # -------------------------------------------------------------------------
 function mpc_mip()
+	mpc = MpcPath1d()
+	mpc.solv = SolverData(mpc)
 	return mpc
 end
 
@@ -334,6 +316,10 @@ function act(mpc::MpcPath1d, state::Array{Float64}, obstacles::Array{Tuple{Float
 	println("state: ", s)
 	println("obstacles: ", obstacles)
 	exit(1)
+
+	x = mpc.solv.x # TODO update x vs x0 vs current state
+	p = mpc.solv.p # TODO update constraints (init + obstacles)
+
 	return 0.0
 end
 # -------------------------------------------------------------------------
