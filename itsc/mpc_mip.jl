@@ -352,13 +352,16 @@ end
 
 function act(mpc::MpcPath1d, state::Array{Float64}, obstacles::Array{Tuple{Float64, Float64}, 1})::Float64
 
+	#println("state=$state")
+	#println("obstacles=$obstacles")
+
 	# retrieve solver setup
 	solv = mpc.solv
 	x, p = solv.x, solv.p
 	slack_col, slack_bin = solv.slack_col, solv.slack_bin
 
 	# Update current initial condition pos and speed
-	for i in 1:length(state)-1
+	for i in 1:2
 		mpc.xinit[i] = state[i]
 		p.constraints += [x[i] == mpc.xinit[i]]
 	end
@@ -372,11 +375,12 @@ function act(mpc::MpcPath1d, state::Array{Float64}, obstacles::Array{Tuple{Float
 	for (i, obstacle) in enumerate(obstacles)
 		tcross, scross = obstacle
 		tcrossd = floor(Int, (tcross-state[3])/mpc.dt) # relative time
-		if (tcrossd >= 1) && (tcrossd <= mpc.T)
+		if (tcrossd > 0) && (tcrossd < mpc.T)
 			solv.num_mpc_obstacles += 1
 			# if within MPC horizon
 			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
 			k = tcrossd * mpc.nvars_dt + 1
+			#println("DBG k=$k")
 
 			# Elastic Model for Collision Avoidance
 			#p.constraints += [x[k] <= scross - dsaf + slack_col[i]]
@@ -399,10 +403,27 @@ function act(mpc::MpcPath1d, state::Array{Float64}, obstacles::Array{Tuple{Float
 
 	println("#constraints = ", length(p.constraints))
 
-	exit(1)
 	# TODO delete init+obstacles constraints
+	# 2 initial conditions constraints to delete (new ones needed at each act() call)
+	pop!(p.constraints) # p.constraints += [x[1] == mpc.xinit[1]]
+	pop!(p.constraints) # p.constraints += [x[2] == mpc.xinit[2]]
 
-	return 0.0
+	for i in 1:solv.num_mpc_obstacles
+		# 4 constraints per obstacle to delete (new ones needed at each act() call)
+		#p.constraints += [x[k] <= scross - dsaf + slack_col[i] + M * slack_bin[i]]
+		#p.constraints += [scross + dsaf - slack_col[i] <= x[k] + M * (1 - slack_bin[i]) ]
+		#p.constraints += [0 <= slack_col[i], slack_col[i] <= dsaf]
+		for j in 1:4
+			pop!(p.constraints)
+		end
+	end
+	solv.num_mpc_obstacles = 0
+
+	println("#constraints = ", length(p.constraints))
+	println("x = $(x.value)")
+	println("---------------------------------> cmd = $(x.value[3])")
+
+	return x.value[3]
 end
 # -------------------------------------------------------------------------
 
