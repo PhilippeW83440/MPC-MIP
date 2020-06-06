@@ -16,7 +16,7 @@ using ECOS
 
 using Plots
 
-testu = true
+testu = false
 first_plot = true
 
 solvers = Dict("Mosek" => ()->Mosek.Optimizer(),
@@ -34,8 +34,14 @@ solvers = Dict("Mosek" => ()->Mosek.Optimizer(),
 # ECOS is free but does not support Mixed Integer Programming
 
 pkg = "Mosek"
-pkg = "GLPK"
 solver = solvers[pkg]
+
+# For Minnie Simplex tests
+testu, pkg = true, "GLPK"
+
+
+# Hyperparameter(s) of the Collision Avoidance Model
+MARGIN_SAF = 1.1
 
 # -----------------------------------
 # MPC with Mixed Integer Programming
@@ -162,9 +168,13 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin
 	# Order matters !!! comply to a LIFO
 	# https://docs.mosek.com/9.2/capi/guidelines-optimizer.html?highlight=lifo
 
+	# --- Equality constraints ---
+	p.constraints += [x[1] == mpc.xinit[1]]
+	p.constraints += [x[2] == mpc.xinit[2]]
+
 	# Handle obstacle constraint: Elastic Model + Disjunctive Constraints
 	M = 1e4
-	dsaf = 1.1 * mpc.dsaf
+	dsaf = MARGIN_SAF * mpc.dsaf
 	for (i, obstacle) in enumerate(mpc.obstacles)
 		tcross, scross = obstacle
 		tcrossd = floor(Int, tcross/mpc.dt)
@@ -181,9 +191,6 @@ function path1d_constraints(mpc::MpcPath1d, x::Variable, p, slack_col, slack_bin
 		end
 	end
 
-	# --- Equality constraints ---
-	p.constraints += [x[1] == mpc.xinit[1]]
-	p.constraints += [x[2] == mpc.xinit[2]]
 end
 
 function path1d_init(mpc::MpcPath1d)
@@ -209,13 +216,15 @@ mutable struct SolverData
 	slack_col::Vector{Variable} # Elastic Model
 	slack_bin::Vector{Variable} # Disjunctive Constraints
 	p::Problem{Float64}
+	num_mpc_obstacles::Int64 # The obstacles visible within MPC time horizon
 
 	function SolverData(mpc)
 		s = new()
 
 		s.x = Variable(60)
 		s.slack_col, s.slack_bin = [], []
-		for i in 1:length(mpc.obstacles)
+		#for i in 1:length(mpc.obstacles)
+		for i in 1:10 # Account (pre allocate) for future obstacles
 			push!(s.slack_col, Variable(1, Positive()))
 			push!(s.slack_bin, Variable(1, :Bin))
 		end
@@ -225,6 +234,7 @@ mutable struct SolverData
 		pkg == "GLPK" ? cost = sum(s.slack_col) : cost = path1d_cost(mpc, s.x, s.slack_col)
 		s.p = minimize(cost)
 		path1d_constraints(mpc, s.x, s.p, s.slack_col, s.slack_bin)
+		s.num_mpc_obstacles = length(mpc.obstacles)
 
 		return s
 	end
@@ -235,8 +245,9 @@ function dump_sol(solv::SolverData)
 	println("status=", solv.p.status)
 	println("cost=", round(solv.p.optval, digits=2))
 	println("x=", round.(solv.x.value, digits=2))
-	for (j, col) in enumerate(solv.slack_col)
-		println("Collision avoidance constraint $j: slack_col=", round(col.value, digits=2))
+	#for (j, col) in enumerate(solv.slack_col)
+	for j in 1:solv.num_mpc_obstacles
+		println("Collision avoidance constraint $j: slack_col=", round(solv.slack_col[j].value, digits=2))
 		println("Collision avoidance        bin $j: slack_bin=", solv.slack_bin[j].value)
 	end
 end
@@ -324,7 +335,7 @@ function mpc_mip()
 	pop!(p.constraints) # p.constraints += [x[1] == mpc.xinit[1]]
 	pop!(p.constraints) # p.constraints += [x[2] == mpc.xinit[2]]
 
-	for i in 1:length(mpc.obstacles)
+	for i in 1:solv.num_mpc_obstacles
 		# 4 constraints per obstacle to delete (new ones needed at each act() call)
 		#p.constraints += [x[k] <= scross - dsaf + slack_col[i] + M * slack_bin[i]]
 		#p.constraints += [scross + dsaf - slack_col[i] <= x[k] + M * (1 - slack_bin[i]) ]
@@ -333,22 +344,63 @@ function mpc_mip()
 			pop!(p.constraints)
 		end
 	end
+	solv.num_mpc_obstacles = 0
 
 	println("#constraints = ", length(p.constraints))
-	exit(1) # act() code to be completed
-
 	return mpc
 end
 
 function act(mpc::MpcPath1d, state::Array{Float64}, obstacles::Array{Tuple{Float64, Float64}, 1})::Float64
-	# TODO ...
-	println("TODO...")
-	println("state: ", s)
-	println("obstacles: ", obstacles)
-	exit(1)
 
-	x = mpc.solv.x # TODO update x vs x0 vs current state
-	p = mpc.solv.p # TODO update constraints (init + obstacles)
+	# retrieve solver setup
+	solv = mpc.solv
+	x, p = solv.x, solv.p
+	slack_col, slack_bin = solv.slack_col, solv.slack_bin
+
+	# Update current initial condition pos and speed
+	for i in 1:length(state)-1
+		mpc.xinit[i] = state[i]
+		p.constraints += [x[i] == mpc.xinit[i]]
+	end
+	mpc.obstacles = obstacles
+
+	# Update obstacles constraints: Elastic Model + Disjunctive Constraints
+	#mpc.obstacles = obstacles
+	M = 1e4
+	dsaf = MARGIN_SAF * mpc.dsaf
+	solv.num_mpc_obstacles = 0
+	for (i, obstacle) in enumerate(obstacles)
+		tcross, scross = obstacle
+		tcrossd = floor(Int, (tcross-state[3])/mpc.dt) # relative time
+		if (tcrossd >= 1) && (tcrossd <= mpc.T)
+			solv.num_mpc_obstacles += 1
+			# if within MPC horizon
+			# BUG FIX: NOT -1 ... Index starts at 1 in Julia ... 
+			k = tcrossd * mpc.nvars_dt + 1
+
+			# Elastic Model for Collision Avoidance
+			#p.constraints += [x[k] <= scross - dsaf + slack_col[i]]
+			p.constraints += [x[k] <= scross - dsaf + slack_col[i] + M * slack_bin[i]]
+			p.constraints += [scross + dsaf - slack_col[i] <= x[k] + M * (1 - slack_bin[i]) ]
+			p.constraints += [0 <= slack_col[i], slack_col[i] <= dsaf]
+		end
+	end
+
+	println("num_mpc_obstacles=$(solv.num_mpc_obstacles)")
+
+	# Update x0
+	x0 = path1d_init(mpc)
+	x.value = x0
+
+	println("Attempting solve ...")
+	solve!(solv.p, solver, warmstart=true)
+	println("Finished solve")
+	dump_sol(solv)
+
+	println("#constraints = ", length(p.constraints))
+
+	exit(1)
+	# TODO delete init+obstacles constraints
 
 	return 0.0
 end
