@@ -16,7 +16,7 @@ using ECOS
 
 using Plots
 
-testu = false
+testu = true
 first_plot = true
 
 solvers = Dict("Mosek" => ()->Mosek.Optimizer(),
@@ -34,6 +34,7 @@ solvers = Dict("Mosek" => ()->Mosek.Optimizer(),
 # ECOS is free but does not support Mixed Integer Programming
 
 pkg = "Mosek"
+pkg = "GLPK"
 solver = solvers[pkg]
 
 # -----------------------------------
