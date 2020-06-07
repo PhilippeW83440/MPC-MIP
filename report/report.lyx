@@ -317,19 +317,110 @@ Methods
 Collision Avoidance Model
 \end_layout
 
-\begin_layout Itemize
-Elastic Model
+\begin_layout Subsubsection
+Disjunctive Constraints
 \end_layout
 
-\begin_layout Itemize
-Disjunctive Constraints Handling
+\begin_layout Standard
+In general the collision avoidance constraint is defined as 
+\begin_inset Formula $\left\Vert \text{pos}_{\text{ego}}-\text{pos}_{\text{obj}}\right\Vert _{2}\geq\text{d}_{\text{safety}}$
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Standard
+When considering the evolution of an ego vehicle along a path denoted by
+ 
+\begin_inset Formula $s\left(t\right)$
+\end_inset
+
+ and a crossing-point for some other vehicle, at 
+\begin_inset Formula $\left(t_{\text{cross}},s_{\text{cross}}\right)$
+\end_inset
+
+, the collision avoidance constraint is reformulated as: 
+\begin_inset Formula $\left|s\left(t_{\text{cross}}\right)-s_{\text{cross}}\right|\geq\text{d}_{\text{safety}}$
+\end_inset
+
+.
+ Which is equivalent to a disjunctive constraint:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+s\left(t_{\text{cross}}\right)\leq s_{\text{cross}}-d_{\text{safety}}\quad\lor\quad s\left(t_{\text{cross}}\right)\geq s_{\text{cross}}+d_{\text{safety}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In practice the fundamental question we should anwser is wether we should
+ proceed or yield the way w.r.t.
+ this other vehicle.
+ To handle this disjunctive constraint, we introduce a binary slack variable
+ such that the OR constraint is replaced by an AND constraint
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{array}{c}
+s\left(t_{\text{cross}}\right)\leq s_{\text{cross}}-d_{\text{safety}}+My\quad\land\quad s_{\text{cross}}+d_{\text{safety}}\leq s\left(t_{\text{cross}}\right)+M\left(1-y\right)\\
+\\
+\text{ with }y\in\left\{ 0,1\right\} \text{ and }M\in\mathbb{R}^{+}\text{ some large value s.t. when y=1 the constraint is always true }
+\end{array}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This way, even if we have defined two constraints via a AND, which is required
+ to apply optimization algorithms like Interior Point Methods or Simplex,
+ only one or the other constraint will be active: the other one being always
+ true.
+ By using a binary slack variable, we have to use a Mixed Integer Programming
+ solver.
+\end_layout
+
+\begin_layout Standard
+This problem reformulation corresponds to the 
+\begin_inset CommandInset href
+LatexCommand href
+name "Big-M reformulation"
+target "https://optimization.mccormick.northwestern.edu/index.php/Disjunctive_inequalities"
+literal "false"
+
+\end_inset
+
+ of 
+\begin_inset CommandInset href
+LatexCommand href
+name "disjunctive constraints"
+target "https://docs.mosek.com/modeling-cookbook/mio.html#sec-mio-indicator-constraints"
+literal "false"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsubsection
+Elastic Model
 \end_layout
 
 \begin_layout Subsection
 Optimization Algorithms
 \end_layout
 
-\begin_layout Subsection
+\begin_layout Subsubsection
 Penalty Methods
 \end_layout
 

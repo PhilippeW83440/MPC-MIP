@@ -134,14 +134,48 @@ x_{0}=x_{\text{init}}\\
 \section{Methods }
 
 \subsection{Collision Avoidance Model}
-\begin{itemize}
-\item Elastic Model
-\item Disjunctive Constraints Handling
-\end{itemize}
+
+\subsubsection{Disjunctive Constraints}
+
+In general the collision avoidance constraint is defined as $\left\Vert \text{pos}_{\text{ego}}-\text{pos}_{\text{obj}}\right\Vert _{2}\geq\text{d}_{\text{safety}}$ 
+
+When considering the evolution of an ego vehicle along a path denoted
+by $s\left(t\right)$ and a crossing-point for some other vehicle,
+at $\left(t_{\text{cross}},s_{\text{cross}}\right)$, the collision
+avoidance constraint is reformulated as: $\left|s\left(t_{\text{cross}}\right)-s_{\text{cross}}\right|\geq\text{d}_{\text{safety}}$.
+Which is equivalent to a disjunctive constraint:
+
+\[
+s\left(t_{\text{cross}}\right)\leq s_{\text{cross}}-d_{\text{safety}}\quad\lor\quad s\left(t_{\text{cross}}\right)\geq s_{\text{cross}}+d_{\text{safety}}
+\]
+
+In practice the fundamental question we should anwser is wether we
+should proceed or yield the way w.r.t. this other vehicle. To handle
+this disjunctive constraint, we introduce a binary slack variable
+such that the OR constraint is replaced by an AND constraint
+
+\[
+\begin{array}{c}
+s\left(t_{\text{cross}}\right)\leq s_{\text{cross}}-d_{\text{safety}}+My\quad\land\quad s_{\text{cross}}+d_{\text{safety}}\leq s\left(t_{\text{cross}}\right)+M\left(1-y\right)\\
+\\
+\text{ with }y\in\left\{ 0,1\right\} \text{ and }M\in\mathbb{R}^{+}\text{ some large value s.t. when y=1 the constraint is always true }
+\end{array}
+\]
+
+This way, even if we have defined two constraints via a AND, which
+is required to apply optimization algorithms like Interior Point Methods
+or Simplex, only one or the other constraint will be active: the other
+one being always true. By using a binary slack variable, we have to
+use a Mixed Integer Programming solver.
+
+This problem reformulation corresponds to the \href{https://optimization.mccormick.northwestern.edu/index.php/Disjunctive_inequalities}{Big-M reformulation}
+of \href{https://docs.mosek.com/modeling-cookbook/mio.html\#sec-mio-indicator-constraints}{disjunctive constraints}.
+
+\subsubsection{Elastic Model}
 
 \subsection{Optimization Algorithms}
 
-\subsection{Penalty Methods}
+\subsubsection{Penalty Methods}
 
 \[
 p_{\text{quadratic}}\left(x\right)=\sum_{i}\max\left(g_{i}\left(x\right),0\right)^{2}+\sum_{j}h_{j}\left(x\right)
