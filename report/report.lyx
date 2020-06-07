@@ -640,14 +640,60 @@ Optimization under Uncertainty
 \end_layout
 
 \begin_layout Standard
-\begin_inset Formula 
-\[
-\underset{x\in\mathcal{X}}{\min}\quad\underset{z\in\mathcal{Z}}{\max}\quad f\left(x,z\right)
-\]
+We handle uncertainty as per the set-based minimax approach described in
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "10.5555/3351864"
+literal "false"
+
+\end_inset
+
+ chapter 17.
+ We are dealing with imperfect observations of the surrounding vehicles
+ and with even more uncertain driving models.
+ As a consequence, the predicted crossing point 
+\begin_inset Formula $\left(t_{\text{cross}},s_{\text{cross}}\right)$
+\end_inset
+
+ is uncertain.
+ This uncertainty is represented by a random variable 
+\begin_inset Formula $z$
+\end_inset
+
+ and the crossing vehicle can be at any location within an uncertainty area
+ represented as a circle in the 
+\begin_inset Formula $\left(s,t\right)$
+\end_inset
+
+ domain; the shadow area in the ST graph (longitudinal position S along
+ the path vs Time).
+ 
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Graphics
+	filename img/path1d_interior1_st_test1.png
+	lyxscale 25
+	scale 25
 
 \end_inset
 
 
+\end_layout
+
+\begin_layout Standard
+We try to avoid the whole uncertainty area, complying to the minimax approach
+ 
+\begin_inset Formula $\underset{x\in\mathcal{X}}{\min}\quad\underset{z\in\mathcal{Z}}{\max}\quad f\left(x,z\right).$
+\end_inset
+
+ But if we can not avoid the full uncertainty area, we will remain as far
+ as possible from its center, via the Elastic Collision Avoidance Model
+ described previously.
+ This Elastic Model strictly enforces dynamics constraints but relaxes the
+ safety distance as little as possible.
 \end_layout
 
 \begin_layout Section
@@ -690,13 +736,6 @@ Cost value: efficiency and comfort (lower cost function)
 
 \begin_layout Standard
 \align center
-\begin_inset Graphics
-	filename /home/philippew/AA222_Project/writeup/presentation/path1d_interior1_st_test1.png
-	lyxscale 30
-	scale 30
-
-\end_inset
-
 
 \end_layout
 

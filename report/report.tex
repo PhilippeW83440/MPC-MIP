@@ -274,10 +274,25 @@ phase of an Interior Point method with a simplex algorithm.
 
 \subsection{Optimization under Uncertainty}
 
-\[
-\underset{x\in\mathcal{X}}{\min}\quad\underset{z\in\mathcal{Z}}{\max}\quad f\left(x,z\right)
-\]
+We handle uncertainty as per the set-based minimax approach described
+in \cite{10.5555/3351864} chapter 17. We are dealing with imperfect
+observations of the surrounding vehicles and with even more uncertain
+driving models. As a consequence, the predicted crossing point $\left(t_{\text{cross}},s_{\text{cross}}\right)$
+is uncertain. This uncertainty is represented by a random variable
+$z$ and the crossing vehicle can be at any location within an uncertainty
+area represented as a circle in the $\left(s,t\right)$ domain; the
+shadow area in the ST graph (longitudinal position S along the path
+vs Time). 
+\begin{center}
+\includegraphics[scale=0.25]{img/path1d_interior1_st_test1}
+\par\end{center}
 
+We try to avoid the whole uncertainty area, complying to the minimax
+approach $\underset{x\in\mathcal{X}}{\min}\quad\underset{z\in\mathcal{Z}}{\max}\quad f\left(x,z\right).$
+But if we can not avoid the full uncertainty area, we will remain
+as far as possible from its center, via the Elastic Collision Avoidance
+Model described previously. This Elastic Model strictly enforces dynamics
+constraints but relaxes the safety distance as little as possible.
 
 \section{Experiments}
 
@@ -290,7 +305,6 @@ The gihub repo is \href{https://github.com/PhilippeW83440/AA222_Project}{AA222-p
 \item Cost value: efficiency and comfort (lower cost function)
 \end{itemize}
 \begin{center}
-\includegraphics[scale=0.3]{/home/philippew/AA222_Project/writeup/presentation/path1d_interior1_st_test1}
 \par\end{center}
 
 \subsection{Anti Collision Tests Benchmarks}
