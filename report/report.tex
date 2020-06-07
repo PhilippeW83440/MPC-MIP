@@ -75,6 +75,38 @@
 
 \usepackage{forest}
 
+
+\usepackage{mathbbol}
+ 
+\usepackage{listings}
+\usepackage{xcolor}
+ 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+ 
+\lstset{style=mystyle}
+
 \makeatother
 
 \begin{document}
@@ -305,16 +337,43 @@ constraints but relaxes the safety distance as little as possible.
 
 The gihub repo is \href{https://github.com/PhilippeW83440/AA222_Project}{AA222-project}. 
 
-\subsection{ST Graphs Analysis}
+\subsection{Solvers Benchmarks}
 \begin{itemize}
 \item Runtime: $\leq250$ ms for real time applicability
 \item Feasibility constraints compliance: check safety \& dynamics constraints
 \item Cost value: efficiency and comfort (lower cost function)
 \end{itemize}
+Accuracy is similar for all solvers. The difference is the runtime.
+
+\begin{figure}[H]
+\noindent \includegraphics[scale=0.33]{img/st_graph_solvers}\includegraphics[scale=0.33]{img/path1d_interior_st_test2}
+
+\caption{Solvers Runtime Benchmark}
+\end{figure}
+
+\begin{lstlisting}
+MOSEK runtime=13 ms
+Collision avoidance constraint 1: slack_col=3.19
+Collision avoidance constraint 2: slack_col=-0.0
+\end{lstlisting}
+
+\begin{lstlisting}
+OPTIMIZE.jl runtime=483 ms
+Iter 124 BFGS=1.62 ms: INV=0.63 ms, BT=0.38 ms, GRAD=0.40 ms
+max   equality constraint violation:(1.256239e-11, 4) out of 40
+max inequality constraint violation:(-0.000311, 120) out of 122
+Collision avoidance constraint: slack_col=[3.19, 0.0]
+Pass: optimize returns a feasible solution on 2/2 random seeds.
+\end{lstlisting}
 \begin{center}
 \par\end{center}
 
 \subsection{Anti Collision Tests Benchmarks}
+
+We use the MOSEK solver for these tests. While ECOS is even faster
+in general, ECOS does not support Mixed Integer Programming which
+we need for the most advanced version of the Collision Avoidance model.
+MOSEK is a commercial solver for which we have an educational license.
 
 We use five metrics to evaluate the performance of our different approaches.
 $\left(1\right)$ The main success metric is the percentage of cases

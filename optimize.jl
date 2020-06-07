@@ -327,7 +327,8 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 	end
 
 	t2 = time_ns()
-	println("runtime = $((t2-t1)/1e9)")
+	runtime = convert(Int64, round((t2-t1)/1e6))
+	println("runtime=$runtime ms")
 
 
 	push!(scores, f(x))
@@ -349,9 +350,10 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 
 		mpc = path1d_mpc()
 		println("x_history[1]  : ", x_history[1])
-		println("x_history[end]: ", round.(x_history[end]; digits=4))
+		println("x_history[end]: ", round.(x_history[end]; digits=2))
 
 		s = [x_history[end][i] for i in (1:3:length(x_history[end]))]
+		s = s[1:end-length(mpc.slack_col)]
 		t = collect((1:length(s))) .- 1
 		t = t .* mpc.dt
 
@@ -359,18 +361,19 @@ function optimize(f, g, c, h, h_Ax_b, x0, n, prob)
 		#println("t=$t")
 		#println("obstacles=$(mpc.obstacles)")
 
-		plot(t, s, title="s-t graph", label="final path", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:bottomright)
+		plot(t, s, title="s-t graph", label="OPTIMIZE.JL path ($runtime ms)", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:topleft)
 		for (i, obs) in enumerate(mpc.obstacles)
 			tt, s = obs
 			plot!(circleShape(tt, s, mpc.dt, mpc.dsaf), st=[:shape,], lw=0.5, linecolor=:black, fillalpha=0.2, label="obstacle $i")
 		end
 
-		if occursin("interior", prob)
-			s = [x_feas[i] for i in (1:3:length(x_feas))]
-			plot!(t, s, label="feasibility path", marker=2)
-		end
+		#if occursin("interior", prob)
+		#	s = [x_feas[i] for i in (1:3:length(x_feas))]
+		#	plot!(t, s, label="feasibility path", marker=2)
+		#end
 
 		s = [x0[i] for i in (1:3:length(x0))]
+		s = s[1:end-length(mpc.slack_col)]
 		plot!(t, s, label="initial path", marker=2)
 
 		savefig("plots/$(prob)_st_test$(test_num).png")

@@ -60,6 +60,38 @@
 \usepackage{pgfplots}
 
 \usepackage{forest}
+
+
+\usepackage{mathbbol}
+ 
+\usepackage{listings}
+\usepackage{xcolor}
+ 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+ 
+\lstset{style=mystyle}
 \end_preamble
 \use_default_options false
 \maintain_unincluded_children false
@@ -715,7 +747,7 @@ literal "false"
 \end_layout
 
 \begin_layout Subsection
-ST Graphs Analysis
+Solvers Benchmarks
 \end_layout
 
 \begin_layout Itemize
@@ -735,12 +767,160 @@ Cost value: efficiency and comfort (lower cost function)
 \end_layout
 
 \begin_layout Standard
+Accuracy is similar for all solvers.
+ The difference is the runtime.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement H
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\noindent
+\begin_inset Graphics
+	filename img/st_graph_solvers.png
+	lyxscale 33
+	scale 33
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename img/path1d_interior_st_test2.png
+	lyxscale 33
+	scale 33
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Solvers Runtime Benchmark
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{lstlisting}
+\end_layout
+
+\begin_layout Plain Layout
+
+MOSEK runtime=13 ms
+\end_layout
+
+\begin_layout Plain Layout
+
+Collision avoidance constraint 1: slack_col=3.19
+\end_layout
+
+\begin_layout Plain Layout
+
+Collision avoidance constraint 2: slack_col=-0.0
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{lstlisting}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{lstlisting}
+\end_layout
+
+\begin_layout Plain Layout
+
+OPTIMIZE.jl runtime=483 ms
+\end_layout
+
+\begin_layout Plain Layout
+
+Iter 124 BFGS=1.62 ms: INV=0.63 ms, BT=0.38 ms, GRAD=0.40 ms
+\end_layout
+
+\begin_layout Plain Layout
+
+max   equality constraint violation:(1.256239e-11, 4) out of 40
+\end_layout
+
+\begin_layout Plain Layout
+
+max inequality constraint violation:(-0.000311, 120) out of 122
+\end_layout
+
+\begin_layout Plain Layout
+
+Collision avoidance constraint: slack_col=[3.19, 0.0]
+\end_layout
+
+\begin_layout Plain Layout
+
+Pass: optimize returns a feasible solution on 2/2 random seeds.
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{lstlisting}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 \align center
 
 \end_layout
 
 \begin_layout Subsection
 Anti Collision Tests Benchmarks
+\end_layout
+
+\begin_layout Standard
+We use the MOSEK solver for these tests.
+ While ECOS is even faster in general, ECOS does not support Mixed Integer
+ Programming which we need for the most advanced version of the Collision
+ Avoidance model.
+ MOSEK is a commercial solver for which we have an educational license.
 \end_layout
 
 \begin_layout Standard
