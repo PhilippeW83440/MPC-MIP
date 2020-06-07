@@ -3,6 +3,8 @@
 \documentclass{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{float}
+\usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{microtype}
@@ -12,6 +14,11 @@
  {hyperref}
 
 \makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Because html converters don't know tabularnewline
+\providecommand{\tabularnewline}{\\}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
 \usepackage[final]{nips_2017}
 % allow utf-8 input
@@ -320,9 +327,33 @@ The last metric is a safety metric: for some of our randomly generated
 test cases, a collision is unavoidable. In these cases, we aim for
 a lower speed at collision.
 
+\begin{table}[H]
+\centering{
+
+\begin{tabular}{cccccc}
+\toprule 
+Mean & Success & Runtime & HardBrakes & Steps & Collision Speed\tabularnewline
+\midrule
+\midrule 
+Baseline & 22\% & $<1\mu s$ & 0.0 & 40.0 & 20.0 m.s$^{-1}$\tabularnewline
+\midrule 
+MPC & 79\% & 19 ms & 3.09 & 39.5 & 18.5 m.s$^{-1}$\tabularnewline
+\midrule 
+MPC\_MIP & 96\% & 22 ms & 0.19 & 53.8 & 18.7 m.s$^{-1}$\tabularnewline
+\midrule 
+Dynamic Programming & 96\% & 22.3 sec & 0.48 & 33.1 & 15.5 m.s$^{-1}$\tabularnewline
+\bottomrule
+\end{tabular}
+
+}
+
+\caption{Results over 100 anti-collision tests}
+\end{table}
+
+
 \section{Conclusion }
 
-It works even better than expected ...
+It works fine ...
 
 \bibliographystyle{plain}
 \nocite{*}
