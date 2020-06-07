@@ -136,7 +136,8 @@ x_{0}=x_{\text{init}}\\
 \subsection{Collision Avoidance Model}
 
 We reformulate the collision avoidance model and later on demonstrate
-the improvements it provides in a set of benchmarks.
+the improvements it provides in a set of benchmarks. An implementation
+of this model is available in \href{https://github.com/PhilippeW83440/AA222_Project/blob/master/itsc/mpc_mip.jl}{mpc\_mip.jl}. 
 
 \subsubsection{Disjunctive Constraints}
 
@@ -210,28 +211,51 @@ fail.
 
 \subsection{Optimization Algorithms}
 
+We use the following generic optimization formulation and notations:
+\[
+\begin{array}{cc}
+\underset{\mathbf{x}\in\mathbb{R}^{n}}{\min} & f\left(\mathbf{x}\right)\in\mathbb{R}\\
+\text{subject to} & \mathbf{g}\left(\mathbf{x}\right)\leq\mathbf{0}\in\mathbb{R}^{k}\\
+ & \mathbf{h}\left(\mathbf{x}\right)=\mathbf{0}\in\mathbb{R}^{m}
+\end{array}
+\]
+
+
 \subsubsection{Penalty Methods}
 
+We first consider Penalty and Augmented Lagrangian methods \cite{10.5555/3351864}
+which transform the constrained problem into an unconstrained one
+via the use of the following penalty methods:
 \[
-p_{\text{quadratic}}\left(x\right)=\sum_{i}\max\left(g_{i}\left(x\right),0\right)^{2}+\sum_{j}h_{j}\left(x\right)
+p_{\text{quadratic}}\left(x\right)=\sum_{i}\max\left(g_{i}\left(x\right),0\right)^{2}+\sum_{j}h_{j}\left(x\right)\quad p_{\text{Lagrange}}\left(x\right)=\frac{1}{2}\rho\sum_{i}h_{i}\left(x\right)^{2}-\sum_{i}\lambda_{i}h_{i}\left(x\right)
 \]
 
-\[
-p_{\text{Lagrange}}\left(x\right)=\frac{1}{2}\rho\sum_{i}h_{i}\left(x\right)^{2}-\sum_{i}\lambda_{i}h_{i}\left(x\right)
-\]
-
+The issue with these methods is that even if they may end up approaching
+a minimum, it may be from an infeasible region. This is why Interior
+Point Methods are usually preferred.
 
 \subsubsection{Interior Point Method with Inequality and Equality Constraints}
 
+We build upon the work that was done for \href{https://web.stanford.edu/class/aa222/cgi-bin/wordpress/projects/project-2/}{AA222 Project 2}.
+An Interior Point Method based on a Quasi-Newton method, BFGS, with
+backtracking Line search was implemented. But here we deal with equality
+constraints, of the form $Ax=b$ (corresponding mainly to our Vehicle
+Dynamics Model), in addition to inequality constraints. We modify
+the way we compute the search direction. At every step, we do a second
+order approximation of our minimization function. We express the Lagrangian
+$\mathcal{L}\left(x,\lambda\right)$ and solve for $\nabla_{x}\mathcal{L}=0$.
+The solution of the resulting system of equations provides the new
+search direction: $d=\Delta x_{\text{newton\_step}}$, everything
+else being unchanged. 
+
 \[
 \underset{\text{subject to}}{\min}\begin{cases}
-\hat{f}\left(x+v\right)=f\left(x\right)+\nabla f\left(x\right)^{T}v+\frac{1}{2}v^{T}\nabla^{2}f\left(x\right)v & \text{Taylor 2nd order approx}\\
+\hat{f}\left(x+v\right)=f\left(x\right)+\nabla f\left(x\right)^{T}v+\frac{1}{2}v^{T}\nabla^{2}f\left(x\right)v & \text{Second order Taylor approximation}\\
 A\left(x+v\right)=b
 \end{cases}
 \]
- 
 \[
-\text{Via optimality conditions on \ensuremath{\mathcal{L}\left(x,\lambda\right):} }\begin{bmatrix}\Delta x_{\text{newton\_step}}\\
+\text{Via optimality conditions on \ensuremath{\mathcal{L}\left(x,\lambda\right)}\text{ we get:} }\begin{bmatrix}\Delta x_{\text{newton\_step}}\\
 \lambda
 \end{bmatrix}=\begin{bmatrix}\nabla^{2}f\left(x\right) & A^{T}\\
 A & 0
@@ -240,6 +264,8 @@ A & 0
 \end{bmatrix}
 \]
 
+The details of the derivatoin can be found in \cite{10.5555/993483}
+chapter 10 and our implementation in \href{https://github.com/PhilippeW83440/AA222_Project/blob/master/optimize.jl}{optimize.jl}
 
 \subsubsection{Simplex Algorithm}
 

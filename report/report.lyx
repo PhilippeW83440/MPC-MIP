@@ -320,6 +320,17 @@ Collision Avoidance Model
 \begin_layout Standard
 We reformulate the collision avoidance model and later on demonstrate the
  improvements it provides in a set of benchmarks.
+ An implementation of this model is available in 
+\begin_inset CommandInset href
+LatexCommand href
+name "mpc_mip.jl"
+target "https://github.com/PhilippeW83440/AA222_Project/blob/master/itsc/mpc_mip.jl"
+literal "false"
+
+\end_inset
+
+.
+ 
 \end_layout
 
 \begin_layout Subsubsection
@@ -475,14 +486,40 @@ If we do not use such an elastic slack variable, a convex solver would
 Optimization Algorithms
 \end_layout
 
+\begin_layout Standard
+We use the following generic optimization formulation and notations: 
+\begin_inset Formula 
+\[
+\begin{array}{cc}
+\underset{\mathbf{x}\in\mathbb{R}^{n}}{\min} & f\left(\mathbf{x}\right)\in\mathbb{R}\\
+\text{subject to} & \mathbf{g}\left(\mathbf{x}\right)\leq\mathbf{0}\in\mathbb{R}^{k}\\
+ & \mathbf{h}\left(\mathbf{x}\right)=\mathbf{0}\in\mathbb{R}^{m}
+\end{array}
+\]
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Subsubsection
 Penalty Methods
 \end_layout
 
 \begin_layout Standard
+We first consider Penalty and Augmented Lagrangian methods 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "10.5555/3351864"
+literal "false"
+
+\end_inset
+
+ which transform the constrained problem into an unconstrained one via the
+ use of the following penalty methods:
 \begin_inset Formula 
 \[
-p_{\text{quadratic}}\left(x\right)=\sum_{i}\max\left(g_{i}\left(x\right),0\right)^{2}+\sum_{j}h_{j}\left(x\right)
+p_{\text{quadratic}}\left(x\right)=\sum_{i}\max\left(g_{i}\left(x\right),0\right)^{2}+\sum_{j}h_{j}\left(x\right)\quad p_{\text{Lagrange}}\left(x\right)=\frac{1}{2}\rho\sum_{i}h_{i}\left(x\right)^{2}-\sum_{i}\lambda_{i}h_{i}\left(x\right)
 \]
 
 \end_inset
@@ -491,14 +528,9 @@ p_{\text{quadratic}}\left(x\right)=\sum_{i}\max\left(g_{i}\left(x\right),0\right
 \end_layout
 
 \begin_layout Standard
-\begin_inset Formula 
-\[
-p_{\text{Lagrange}}\left(x\right)=\frac{1}{2}\rho\sum_{i}h_{i}\left(x\right)^{2}-\sum_{i}\lambda_{i}h_{i}\left(x\right)
-\]
-
-\end_inset
-
-
+The issue with these methods is that even if they may end up approaching
+ a minimum, it may be from an infeasible region.
+ This is why Interior Point Methods are usually preferred.
 \end_layout
 
 \begin_layout Subsubsection
@@ -506,20 +538,59 @@ Interior Point Method with Inequality and Equality Constraints
 \end_layout
 
 \begin_layout Standard
+We build upon the work that was done for 
+\begin_inset CommandInset href
+LatexCommand href
+name "AA222 Project 2"
+target "https://web.stanford.edu/class/aa222/cgi-bin/wordpress/projects/project-2/"
+literal "false"
+
+\end_inset
+
+.
+ An Interior Point Method based on a Quasi-Newton method, BFGS, with backtrackin
+g Line search was implemented.
+ But here we deal with equality constraints, of the form 
+\begin_inset Formula $Ax=b$
+\end_inset
+
+ (corresponding mainly to our Vehicle Dynamics Model), in addition to inequality
+ constraints.
+ We modify the way we compute the search direction.
+ At every step, we do a second order approximation of our minimization function.
+ We express the Lagrangian 
+\begin_inset Formula $\mathcal{L}\left(x,\lambda\right)$
+\end_inset
+
+ and solve for 
+\begin_inset Formula $\nabla_{x}\mathcal{L}=0$
+\end_inset
+
+.
+ The solution of the resulting system of equations provides the new search
+ direction: 
+\begin_inset Formula $d=\Delta x_{\text{newton\_step}}$
+\end_inset
+
+, everything else being unchanged.
+ 
+\end_layout
+
+\begin_layout Standard
 \begin_inset Formula 
 \[
 \underset{\text{subject to}}{\min}\begin{cases}
-\hat{f}\left(x+v\right)=f\left(x\right)+\nabla f\left(x\right)^{T}v+\frac{1}{2}v^{T}\nabla^{2}f\left(x\right)v & \text{Taylor 2nd order approx}\\
+\hat{f}\left(x+v\right)=f\left(x\right)+\nabla f\left(x\right)^{T}v+\frac{1}{2}v^{T}\nabla^{2}f\left(x\right)v & \text{Second order Taylor approximation}\\
 A\left(x+v\right)=b
 \end{cases}
 \]
 
 \end_inset
 
- 
+
 \begin_inset Formula 
 \[
-\text{Via optimality conditions on \ensuremath{\mathcal{L}\left(x,\lambda\right):} }\begin{bmatrix}\Delta x_{\text{newton\_step}}\\
+\text{Via optimality conditions on \ensuremath{\mathcal{L}\left(x,\lambda\right)}\text{ we get:} }\begin{bmatrix}\Delta x_{\text{newton\_step}}\\
 \lambda
 \end{bmatrix}=\begin{bmatrix}\nabla^{2}f\left(x\right) & A^{T}\\
 A & 0
@@ -527,6 +598,27 @@ A & 0
 -\left(Ax-b\right)
 \end{bmatrix}
 \]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The details of the derivatoin can be found in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "10.5555/993483"
+literal "false"
+
+\end_inset
+
+ chapter 10 and our implementation in 
+\begin_inset CommandInset href
+LatexCommand href
+name "optimize.jl"
+target "https://github.com/PhilippeW83440/AA222_Project/blob/master/optimize.jl"
+literal "false"
 
 \end_inset
 
