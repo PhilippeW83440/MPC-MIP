@@ -1,0 +1,523 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\begin_preamble
+\usepackage[final]{nips_2017}
+% allow utf-8 input
+% use 8-bit T1 fonts
+% hyperlinks
+\usepackage{url}% simple URL typesetting
+\usepackage{booktabs}% professional-quality tables
+\usepackage{amsfonts}% blackboard math symbols
+\usepackage{nicefrac}% compact symbols for 1/2, etc.
+% microtypography
+\title{Trajectory Optimization with Dynamic Obstacles Avoidance}
+
+\author{
+  Philippe Weingertner and Minnie Ho\\
+  \texttt{pweinger@stanford.edu minnieho@stanford.edu} \\
+  %% examples of more authors
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \AND
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+}
+
+\usepackage{algorithm,algpseudocode}
+
+
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows}
+\usetikzlibrary{er,positioning}
+\usetikzlibrary{matrix}
+\tikzset{
+    events/.style={ellipse, draw, align=center},
+}
+
+\usepackage{graphicx}
+\usetikzlibrary{fit}
+\usetikzlibrary{bayesnet}
+\usepackage{pgfplots}
+
+\usepackage{forest}
+\end_preamble
+\use_default_options false
+\maintain_unincluded_children false
+\language english
+\language_package none
+\inputencoding utf8
+\fontencoding T1
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype true
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref true
+\pdf_bookmarks false
+\pdf_bookmarksnumbered false
+\pdf_bookmarksopen false
+\pdf_bookmarksopenlevel 1
+\pdf_breaklinks false
+\pdf_pdfborder false
+\pdf_colorlinks false
+\pdf_backref section
+\pdf_pdfusetitle false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 0
+\use_package cancel 0
+\use_package esint 1
+\use_package mathdots 0
+\use_package mathtools 0
+\use_package mhchem 0
+\use_package stackrel 0
+\use_package stmaryrd 0
+\use_package undertilde 0
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 0
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+% 
+\backslash
+nipsfinalcopy is no longer used
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+maketitle
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Abstract
+We study the problem of Trajectory Optimization.
+ 
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+This project  investigates trajectory optimization in the presence of obstacles
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "article,Fan2018BaiduAE,Katrakazas2015RealtimeMP,Zhang2020OptimizationBasedCA"
+literal "false"
+
+\end_inset
+
+.
+ One such application for this class of problems is that of autonomous driving,
+ where we have an ego vehicle and dynamic obstacles (vehicles, pedestrians)
+ which may intersect our desired trajectory and which we wish to avoid using
+ motion planning and control.
+ Trajectory optimization problems minimize a cost function which takes into
+ account start and terminal states, as well as cost along the trajectory
+ path.
+ The design space is subject to constraints on the states and control input
+ at sampled time points.
+\end_layout
+
+\begin_layout Section
+Related Work
+\end_layout
+
+\begin_layout Standard
+Todo ...
+\end_layout
+
+\begin_layout Section
+Problem Formulation
+\end_layout
+
+\begin_layout Standard
+We define a MPC problem over 20 time steps of 
+\begin_inset Formula $250$
+\end_inset
+
+ ms each
+\series bold
+ 
+\series default
+with a Quadratic Cost function with 
+\begin_inset Formula $x\in\mathbb{R}^{60}$
+\end_inset
+
+ and 
+\begin_inset Formula $160$
+\end_inset
+
+ constraints.
+ We have 
+\begin_inset Formula $120$
+\end_inset
+
+ linear and nonlinear (
+\begin_inset Formula $\left\Vert x_{\text{ego}}-x_{\text{obj}}\right\Vert \geq d_{\text{saf}}$
+\end_inset
+
+) inequality constraints and  
+\begin_inset Formula $40$
+\end_inset
+
+ linear equality constraints (Dynamics Model).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\underset{u_{0},\ldots,u_{T-1}}{\min}\left(x_{T}-x_{\text{ref}}\right)^{\intercal}Q_{T}\left(x_{T}-x_{\text{ref}}\right)+\sum_{k=0}^{T-1}\left(x_{k}-x_{\text{ref}}\right)^{\intercal}Q\left(x_{k}-x_{\text{ref}}\right)+u_{k}^{\intercal}\;R\;u_{k}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\text{subject to }\begin{cases}
+x_{k,\text{min}}\leq x_{k}\leq x_{k,\max}\\
+u_{k,\text{min}}\leq u_{k}\leq u_{k,\max}\\
+x_{k+1}=A_{d}x_{k}+B_{d}u_{k}\\
+x_{0}=x_{\text{init}}\\
+\forall\left(t_{\text{col}},s_{\text{col}}\right)_{i\in\left[1,10\right]} & x_{t_{\text{col}}^{\left(i\right)}}\left[1\right]<s_{\text{col}}^{\left(i\right)}-\Delta_{\text{safety}}\text{ or }x_{t_{\text{col}}^{\left(i\right)}}\left[1\right]>s_{\text{col}}^{\left(i\right)}+\Delta_{\text{safety}}
+\end{cases}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+bigbreak	
+\end_layout
+
+\end_inset
+
+Linear Dynamics with Constant Acceleration model in between 2 time steps
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{bmatrix}s\\
+\dot{s}
+\end{bmatrix}_{k+1}=A_{d}\begin{bmatrix}s\\
+\dot{s}
+\end{bmatrix}_{k}+B_{d}\begin{bmatrix}\ddot{s}\end{bmatrix}_{k}\text{with }A_{d}=\begin{bmatrix}1 & \Delta t\\
+0 & 1
+\end{bmatrix},B_{d}=\begin{bmatrix}\frac{\Delta t^{2}}{2}\\
+\Delta t
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Methods 
+\end_layout
+
+\begin_layout Subsection
+Collision Avoidance Model
+\end_layout
+
+\begin_layout Itemize
+Elastic Model
+\end_layout
+
+\begin_layout Itemize
+Disjunctive Constraints Handling
+\end_layout
+
+\begin_layout Subsection
+Optimization Algorithms
+\end_layout
+
+\begin_layout Subsection
+Penalty Methods
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+p_{\text{quadratic}}\left(x\right)=\sum_{i}\max\left(g_{i}\left(x\right),0\right)^{2}+\sum_{j}h_{j}\left(x\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+p_{\text{Lagrange}}\left(x\right)=\frac{1}{2}\rho\sum_{i}h_{i}\left(x\right)^{2}-\sum_{i}\lambda_{i}h_{i}\left(x\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Interior Point Method with Inequality and Equality Constraints
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\underset{\text{subject to}}{\min}\begin{cases}
+\hat{f}\left(x+v\right)=f\left(x\right)+\nabla f\left(x\right)^{T}v+\frac{1}{2}v^{T}\nabla^{2}f\left(x\right)v & \text{Taylor 2nd order approx}\\
+A\left(x+v\right)=b
+\end{cases}
+\]
+
+\end_inset
+
+ 
+\begin_inset Formula 
+\[
+\text{Via optimality conditions on \ensuremath{\mathcal{L}\left(x,\lambda\right):} }\begin{bmatrix}\Delta x_{\text{newton\_step}}\\
+\lambda
+\end{bmatrix}=\begin{bmatrix}\nabla^{2}f\left(x\right) & A^{T}\\
+A & 0
+\end{bmatrix}^{-1}\begin{bmatrix}-\nabla f\left(x\right)\\
+-\left(Ax-b\right)
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Simplex Algorithm
+\end_layout
+
+\begin_layout Standard
+Simplex is fast.
+ We investigate how to bootstrap the feasibility search phase of an Interior
+ Point method with a simplex algorithm.
+\end_layout
+
+\begin_layout Subsection
+Optimization under Uncertainty
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\underset{x\in\mathcal{X}}{\min}\quad\underset{z\in\mathcal{Z}}{\max}\quad f\left(x,z\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Experiments
+\end_layout
+
+\begin_layout Standard
+The gihub repo is 
+\begin_inset CommandInset href
+LatexCommand href
+name "AA222-project"
+target "https://github.com/PhilippeW83440/AA222_Project"
+literal "false"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsection
+ST Graphs Analysis
+\end_layout
+
+\begin_layout Itemize
+Runtime: 
+\begin_inset Formula $\leq250$
+\end_inset
+
+ ms for real time applicability
+\end_layout
+
+\begin_layout Itemize
+Feasibility constraints compliance: check safety & dynamics constraints
+\end_layout
+
+\begin_layout Itemize
+Cost value: efficiency and comfort (lower cost function)
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Graphics
+	filename /home/philippew/AA222_Project/writeup/presentation/path1d_interior1_st_test1.png
+	lyxscale 30
+	scale 30
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Anti Collision Tests Benchmarks
+\end_layout
+
+\begin_layout Standard
+We use five metrics to evaluate the performance of our different approaches.
+ 
+\begin_inset Formula $\left(1\right)$
+\end_inset
+
+ The main success metric is the percentage of cases where we reach a target
+ state without collision.
+ 
+\begin_inset Formula $\left(2\right)$
+\end_inset
+
+ The second metric is the agent runtime.
+ 
+\begin_inset Formula $\left(3\right)$
+\end_inset
+
+ The third metric is a comfort metric: the number of hard braking decisions.
+ 
+\begin_inset Formula $\left(4\right)$
+\end_inset
+
+ The fourth metric relates to efficiency: how fast we reach a target while
+ complying to some speed limitation.
+ 
+\begin_inset Formula $\left(5\right)$
+\end_inset
+
+ The last metric is a safety metric: for some of our randomly generated
+ test cases, a collision is unavoidable.
+ In these cases, we aim for a lower speed at collision.
+\end_layout
+
+\begin_layout Section
+Conclusion 
+\end_layout
+
+\begin_layout Standard
+It works even better than expected ...
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+btprint "btPrintAll"
+bibfiles "project"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

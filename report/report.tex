@@ -1,0 +1,222 @@
+%% LyX 2.3.3 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage[unicode=true,
+ bookmarks=false,
+ breaklinks=false,pdfborder={0 0 1},backref=section,colorlinks=false]
+ {hyperref}
+
+\makeatletter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+\usepackage[final]{nips_2017}
+% allow utf-8 input
+% use 8-bit T1 fonts
+% hyperlinks
+\usepackage{url}% simple URL typesetting
+\usepackage{booktabs}% professional-quality tables
+\usepackage{amsfonts}% blackboard math symbols
+\usepackage{nicefrac}% compact symbols for 1/2, etc.
+% microtypography
+\title{Trajectory Optimization with Dynamic Obstacles Avoidance}
+
+\author{
+  Philippe Weingertner and Minnie Ho\\
+  \texttt{pweinger@stanford.edu minnieho@stanford.edu} \\
+  %% examples of more authors
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \AND
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+  %% \And
+  %% Coauthor \\
+  %% Affiliation \\
+  %% Address \\
+  %% \texttt{email} \\
+}
+
+\usepackage{algorithm,algpseudocode}
+
+
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows}
+\usetikzlibrary{er,positioning}
+\usetikzlibrary{matrix}
+\tikzset{
+    events/.style={ellipse, draw, align=center},
+}
+
+\usepackage{graphicx}
+\usetikzlibrary{fit}
+\usetikzlibrary{bayesnet}
+\usepackage{pgfplots}
+
+\usepackage{forest}
+
+\makeatother
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+\begin{abstract}
+We study the problem of Trajectory Optimization. 
+\end{abstract}
+
+\section{Introduction}
+
+This project  investigates trajectory optimization in the presence
+of obstacles \cite{article,Fan2018BaiduAE,Katrakazas2015RealtimeMP,Zhang2020OptimizationBasedCA}.
+One such application for this class of problems is that of autonomous
+driving, where we have an ego vehicle and dynamic obstacles (vehicles,
+pedestrians) which may intersect our desired trajectory and which
+we wish to avoid using motion planning and control. Trajectory optimization
+problems minimize a cost function which takes into account start and
+terminal states, as well as cost along the trajectory path. The design
+space is subject to constraints on the states and control input at
+sampled time points.
+
+\section{Related Work}
+
+Todo ...
+
+\section{Problem Formulation}
+
+We define a MPC problem over 20 time steps of $250$ ms each\textbf{
+}with a Quadratic Cost function with $x\in\mathbb{R}^{60}$ and $160$
+constraints. We have $120$ linear and nonlinear ($\left\Vert x_{\text{ego}}-x_{\text{obj}}\right\Vert \geq d_{\text{saf}}$)
+inequality constraints and  $40$ linear equality constraints (Dynamics
+Model).
+
+\[
+\underset{u_{0},\ldots,u_{T-1}}{\min}\left(x_{T}-x_{\text{ref}}\right)^{\intercal}Q_{T}\left(x_{T}-x_{\text{ref}}\right)+\sum_{k=0}^{T-1}\left(x_{k}-x_{\text{ref}}\right)^{\intercal}Q\left(x_{k}-x_{\text{ref}}\right)+u_{k}^{\intercal}\;R\;u_{k}
+\]
+
+$\text{subject to }\begin{cases}
+x_{k,\text{min}}\leq x_{k}\leq x_{k,\max}\\
+u_{k,\text{min}}\leq u_{k}\leq u_{k,\max}\\
+x_{k+1}=A_{d}x_{k}+B_{d}u_{k}\\
+x_{0}=x_{\text{init}}\\
+\forall\left(t_{\text{col}},s_{\text{col}}\right)_{i\in\left[1,10\right]} & x_{t_{\text{col}}^{\left(i\right)}}\left[1\right]<s_{\text{col}}^{\left(i\right)}-\Delta_{\text{safety}}\text{ or }x_{t_{\text{col}}^{\left(i\right)}}\left[1\right]>s_{\text{col}}^{\left(i\right)}+\Delta_{\text{safety}}
+\end{cases}$
+
+\bigbreak	Linear Dynamics with Constant Acceleration model in between
+2 time steps
+
+\[
+\begin{bmatrix}s\\
+\dot{s}
+\end{bmatrix}_{k+1}=A_{d}\begin{bmatrix}s\\
+\dot{s}
+\end{bmatrix}_{k}+B_{d}\begin{bmatrix}\ddot{s}\end{bmatrix}_{k}\text{with }A_{d}=\begin{bmatrix}1 & \Delta t\\
+0 & 1
+\end{bmatrix},B_{d}=\begin{bmatrix}\frac{\Delta t^{2}}{2}\\
+\Delta t
+\end{bmatrix}
+\]
+
+
+\section{Methods }
+
+\subsection{Collision Avoidance Model}
+\begin{itemize}
+\item Elastic Model
+\item Disjunctive Constraints Handling
+\end{itemize}
+
+\subsection{Optimization Algorithms}
+
+\subsection{Penalty Methods}
+
+\[
+p_{\text{quadratic}}\left(x\right)=\sum_{i}\max\left(g_{i}\left(x\right),0\right)^{2}+\sum_{j}h_{j}\left(x\right)
+\]
+
+\[
+p_{\text{Lagrange}}\left(x\right)=\frac{1}{2}\rho\sum_{i}h_{i}\left(x\right)^{2}-\sum_{i}\lambda_{i}h_{i}\left(x\right)
+\]
+
+
+\subsubsection{Interior Point Method with Inequality and Equality Constraints}
+
+\[
+\underset{\text{subject to}}{\min}\begin{cases}
+\hat{f}\left(x+v\right)=f\left(x\right)+\nabla f\left(x\right)^{T}v+\frac{1}{2}v^{T}\nabla^{2}f\left(x\right)v & \text{Taylor 2nd order approx}\\
+A\left(x+v\right)=b
+\end{cases}
+\]
+ 
+\[
+\text{Via optimality conditions on \ensuremath{\mathcal{L}\left(x,\lambda\right):} }\begin{bmatrix}\Delta x_{\text{newton\_step}}\\
+\lambda
+\end{bmatrix}=\begin{bmatrix}\nabla^{2}f\left(x\right) & A^{T}\\
+A & 0
+\end{bmatrix}^{-1}\begin{bmatrix}-\nabla f\left(x\right)\\
+-\left(Ax-b\right)
+\end{bmatrix}
+\]
+
+
+\subsubsection{Simplex Algorithm}
+
+Simplex is fast. We investigate how to bootstrap the feasibility search
+phase of an Interior Point method with a simplex algorithm.
+
+\subsection{Optimization under Uncertainty}
+
+\[
+\underset{x\in\mathcal{X}}{\min}\quad\underset{z\in\mathcal{Z}}{\max}\quad f\left(x,z\right)
+\]
+
+
+\section{Experiments}
+
+The gihub repo is \href{https://github.com/PhilippeW83440/AA222_Project}{AA222-project}. 
+
+\subsection{ST Graphs Analysis}
+\begin{itemize}
+\item Runtime: $\leq250$ ms for real time applicability
+\item Feasibility constraints compliance: check safety \& dynamics constraints
+\item Cost value: efficiency and comfort (lower cost function)
+\end{itemize}
+\begin{center}
+\includegraphics[scale=0.3]{/home/philippew/AA222_Project/writeup/presentation/path1d_interior1_st_test1}
+\par\end{center}
+
+\subsection{Anti Collision Tests Benchmarks}
+
+We use five metrics to evaluate the performance of our different approaches.
+$\left(1\right)$ The main success metric is the percentage of cases
+where we reach a target state without collision. $\left(2\right)$
+The second metric is the agent runtime. $\left(3\right)$ The third
+metric is a comfort metric: the number of hard braking decisions.
+$\left(4\right)$ The fourth metric relates to efficiency: how fast
+we reach a target while complying to some speed limitation. $\left(5\right)$
+The last metric is a safety metric: for some of our randomly generated
+test cases, a collision is unavoidable. In these cases, we aim for
+a lower speed at collision.
+
+\section{Conclusion }
+
+It works even better than expected ...
+
+\bibliographystyle{plain}
+\nocite{*}
+\bibliography{project}
+
+\end{document}
