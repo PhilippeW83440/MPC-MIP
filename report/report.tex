@@ -135,6 +135,9 @@ x_{0}=x_{\text{init}}\\
 
 \subsection{Collision Avoidance Model}
 
+We reformulate the collision avoidance model and later on demonstrate
+the improvements it provides in a set of benchmarks.
+
 \subsubsection{Disjunctive Constraints}
 
 In general the collision avoidance constraint is defined as $\left\Vert \text{pos}_{\text{ego}}-\text{pos}_{\text{obj}}\right\Vert _{2}\geq\text{d}_{\text{safety}}$ 
@@ -172,6 +175,38 @@ This problem reformulation corresponds to the \href{https://optimization.mccormi
 of \href{https://docs.mosek.com/modeling-cookbook/mio.html\#sec-mio-indicator-constraints}{disjunctive constraints}.
 
 \subsubsection{Elastic Model}
+
+We would like to have a convex formulation of the problem such that
+we can find as quickly as possible a guaranteed global minimum. The
+problem is that when defining a problem with such a collision avoidance
+constraint 
+\[
+\begin{array}{c}
+\underset{x}{\min}\quad Q_{\text{uadratic}}\left(x\right)\\
+\text{s.t. }a^{T}x\leq b\text{ (safety distance constraint)}
+\end{array}
+\]
+
+This might be causing infeasibility. In practice there may be no dynamically
+feasible motion plan to maintain a pre-defined safety distance. But
+we want to reveal by how much the constraint needs to be relaxed in
+order to become dynamically feasible. We are looking for a Motion
+Plan that is dynamically feasible and which violates at minimum our
+desired safety distance. In order to reveal this value, we introduce
+another slack variable, per collision avoidance constraint , such
+that the problem becomes:
+
+\[
+\begin{array}{c}
+\underset{x}{\min}\quad Q_{\text{uadratic}}\left(x\right)+y\\
+\text{s.t. }a^{T}x\leq b\text{+y (safety distance constraint)}\\
+\text{elastic slack variable: }y\in\mathbb{R}
+\end{array}
+\]
+
+If we do not use such an elastic slack variable, a convex solver would
+ return an infeasibility verdict and Interior Point Methods would
+fail.
 
 \subsection{Optimization Algorithms}
 

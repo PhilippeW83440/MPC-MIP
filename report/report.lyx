@@ -317,6 +317,11 @@ Methods
 Collision Avoidance Model
 \end_layout
 
+\begin_layout Standard
+We reformulate the collision avoidance model and later on demonstrate the
+ improvements it provides in a set of benchmarks.
+\end_layout
+
 \begin_layout Subsubsection
 Disjunctive Constraints
 \end_layout
@@ -414,6 +419,56 @@ literal "false"
 
 \begin_layout Subsubsection
 Elastic Model
+\end_layout
+
+\begin_layout Standard
+We would like to have a convex formulation of the problem such that we can
+ find as quickly as possible a guaranteed global minimum.
+ The problem is that when defining a problem with such a collision avoidance
+ constraint 
+\begin_inset Formula 
+\[
+\begin{array}{c}
+\underset{x}{\min}\quad Q_{\text{uadratic}}\left(x\right)\\
+\text{s.t. }a^{T}x\leq b\text{ (safety distance constraint)}
+\end{array}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This might be causing infeasibility.
+ In practice there may be no dynamically feasible motion plan to maintain
+ a pre-defined safety distance.
+ But we want to reveal by how much the constraint needs to be relaxed in
+ order to become dynamically feasible.
+ We are looking for a Motion Plan that is dynamically feasible and which
+ violates at minimum our desired safety distance.
+ In order to reveal this value, we introduce another slack variable, per
+ collision avoidance constraint , such that the problem becomes:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{array}{c}
+\underset{x}{\min}\quad Q_{\text{uadratic}}\left(x\right)+y\\
+\text{s.t. }a^{T}x\leq b\text{+y (safety distance constraint)}\\
+\text{elastic slack variable: }y\in\mathbb{R}
+\end{array}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If we do not use such an elastic slack variable, a convex solver would 
+ return an infeasibility verdict and Interior Point Methods would fail.
 \end_layout
 
 \begin_layout Subsection
