@@ -388,12 +388,56 @@ constraints but relaxes the safety distance as little as possible.
 The gihub repo is \href{https://github.com/PhilippeW83440/AA222_Project}{AA222-project}. 
 
 \subsection{Solvers Benchmarks}
+
+We benchmark different solvers including our own implementation in
+\href{https://github.com/PhilippeW83440/AA222_Project/blob/master/optimize.jl}{optimize.jl}.
+We check:
 \begin{itemize}
-\item Runtime: $\leq250$ ms for real time applicability
-\item Feasibility constraints compliance: check safety \& dynamics constraints
-\item Cost value: efficiency and comfort (lower cost function)
+\item Constraints compliance: we have defined a set of vehicle dynamics
+constraints and collision avoidance constraints. 
+\item Objective value: the lower this value, the more optimal we are in
+terms of efficiency (maintaining a desired speed) and comfort (minimizing
+jerk)
+\item Runtime: as we are dealing with planning steps of $250$ ms, we need
+to have a runtime below $250$ ms for real time applicability as a
+bare minimum. But in reality we may have to react in less than $40$
+ms in case of emergency. 
 \end{itemize}
-Accuracy is similar for all solvers. The difference is the runtime.
+We first check our own implementation: Interior Point method vs Penalty
+method. As expected the Interior Point methods outperforms the penalty
+methods by ensuring feasibility.
+
+We get with the Interior Point method:
+
+\begin{lstlisting}
+OPTIMIZE.jl INTERIOR POINT METHOD
+max   equality constraint violation:(1.256239e-11, 4) out of 40
+max inequality constraint violation:(-0.000311, 120) out of 122
+Pass: optimize returns a feasible solution on 2/2 random seeds.
+\end{lstlisting}
+
+While with the Penalty method we get:
+
+\begin{lstlisting}
+OPTIMIZE.jl PENALTY METHOD
+max   equality constraint violation:(0.06176, 17) out of 40
+max inequality constraint violation:(3.2979, 120) out of 122
+Fail: optimize returns a feasible solution on 0/2 random seeds.
+\end{lstlisting}
+
+We then benchmark a set of open source solvers like \href{https://web.stanford.edu/~boyd/papers/ecos.html}{ECOS}
+and \href{https://github.com/JuliaOpt/SCS.jl}{SCS} with a set of
+commercial solvers \href{https://www.mosek.com/}{MOSEK} and \href{https://www.ibm.com/analytics/cplex-optimizer}{CPLEX}
+and our own Interior Point implementation \href{https://github.com/PhilippeW83440/AA222_Project/blob/master/optimize.jl}{optimize.jl}
+(with maxcount set to 20K). They all provide feasible solutions which
+are very close, and derive same values for the slack variables. The
+main difference is the runtime: ECOS and MOSEK are the fastest (we
+also tested Gurobi but out trial license expired before writeup. But
+it performs similar to CPLEX). As MOSEK and CPLEX are the only solvers
+handling both Quadratic Cost functions and Mixed Integer Programming,
+we will use \href{https://www.mosek.com/}{MOSEK} for our final set
+of benchmarks instead of \href{https://web.stanford.edu/~boyd/papers/ecos.html}{ECOS}:
+to test our Collision Avoidance model in a serie of 100 tests.
 
 \begin{figure}[H]
 \noindent \includegraphics[scale=0.33]{img/st_graph_solvers}\includegraphics[scale=0.33]{img/path1d_interior_st_test2}
@@ -401,29 +445,32 @@ Accuracy is similar for all solvers. The difference is the runtime.
 \caption{Solvers Runtime Benchmark}
 \end{figure}
 
-\begin{lstlisting}
-MOSEK runtime=13 ms
-Collision avoidance constraint 1: slack_col=3.19
-Collision avoidance constraint 2: slack_col=-0.0
-\end{lstlisting}
+We then analyze further the runtime difference between our own implementation
+and MOSEK. We are using 160 BFGS iterations (40 during the feasibility
+search phase and 120 during interior point phase) while MOSEK just
+requires 20 iterations. We believe the difference is due to the fact
+that MOSEK implements a Primal-Dual Interior Point method instead
+of the raw Barrier Interior Point Method. It exhibits better than
+linear convergence and requires less iterations. 
 
 \begin{lstlisting}
-OPTIMIZE.jl runtime=483 ms
+OPTIMIZE.jl INTERIOR POINT METHOD runtime=256 ms (maxcount set to 10K)
 Iter 124 BFGS=1.62 ms: INV=0.63 ms, BT=0.38 ms, GRAD=0.40 ms
-max   equality constraint violation:(1.256239e-11, 4) out of 40
-max inequality constraint violation:(-0.000311, 120) out of 122
-Collision avoidance constraint: slack_col=[3.19, 0.0]
-Pass: optimize returns a feasible solution on 2/2 random seeds.
 \end{lstlisting}
-\begin{center}
-\par\end{center}
+
+Also our BFGS iterations takes on average around $1.62$ ms with:
+\begin{itemize}
+\item $1.62$ ms spent doing a $100x100$ matrix inversion of our approximated
+Hessian. Which could be further improved with a direct Hessian inverse
+approximation.
+\item $0.38$ ms in Backtracking line search.
+\item $0.40$ ms in approximating Gradient via Finite Differences. By using
+a Complex Step approach we could probably also further improve this
+step. 
+\end{itemize}
+As a conclusion, we will use MOSEK for our next set of experiments.
 
 \subsection{Anti Collision Tests Benchmarks}
-
-We use the MOSEK solver for these tests. While ECOS is even faster
-in general, ECOS does not support Mixed Integer Programming which
-we need for the most advanced version of the Collision Avoidance model.
-MOSEK is a commercial solver for which we have an educational license.
 
 We use five metrics to evaluate the performance of our different approaches.
 $\left(1\right)$ The main success metric is the percentage of cases

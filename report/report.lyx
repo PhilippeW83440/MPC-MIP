@@ -882,25 +882,222 @@ literal "false"
 Solvers Benchmarks
 \end_layout
 
-\begin_layout Itemize
-Runtime: 
-\begin_inset Formula $\leq250$
+\begin_layout Standard
+We benchmark different solvers including our own implementation in 
+\begin_inset CommandInset href
+LatexCommand href
+name "optimize.jl"
+target "https://github.com/PhilippeW83440/AA222_Project/blob/master/optimize.jl"
+literal "false"
+
 \end_inset
 
- ms for real time applicability
+.
+ We check:
 \end_layout
 
 \begin_layout Itemize
-Feasibility constraints compliance: check safety & dynamics constraints
+Constraints compliance: we have defined a set of vehicle dynamics constraints
+ and collision avoidance constraints.
+ 
 \end_layout
 
 \begin_layout Itemize
-Cost value: efficiency and comfort (lower cost function)
+Objective value: the lower this value, the more optimal we are in terms
+ of efficiency (maintaining a desired speed) and comfort (minimizing jerk)
+\end_layout
+
+\begin_layout Itemize
+Runtime: as we are dealing with planning steps of 
+\begin_inset Formula $250$
+\end_inset
+
+ ms, we need to have a runtime below 
+\begin_inset Formula $250$
+\end_inset
+
+ ms for real time applicability as a bare minimum.
+ But in reality we may have to react in less than 
+\begin_inset Formula $40$
+\end_inset
+
+ ms in case of emergency.
+ 
 \end_layout
 
 \begin_layout Standard
-Accuracy is similar for all solvers.
- The difference is the runtime.
+We first check our own implementation: Interior Point method vs Penalty
+ method.
+ As expected the Interior Point methods outperforms the penalty methods
+ by ensuring feasibility.
+\end_layout
+
+\begin_layout Standard
+We get with the Interior Point method:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{lstlisting}
+\end_layout
+
+\begin_layout Plain Layout
+
+OPTIMIZE.jl INTERIOR POINT METHOD
+\end_layout
+
+\begin_layout Plain Layout
+
+max   equality constraint violation:(1.256239e-11, 4) out of 40
+\end_layout
+
+\begin_layout Plain Layout
+
+max inequality constraint violation:(-0.000311, 120) out of 122
+\end_layout
+
+\begin_layout Plain Layout
+
+Pass: optimize returns a feasible solution on 2/2 random seeds.
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{lstlisting}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+While with the Penalty method we get:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{lstlisting}
+\end_layout
+
+\begin_layout Plain Layout
+
+OPTIMIZE.jl PENALTY METHOD
+\end_layout
+
+\begin_layout Plain Layout
+
+max   equality constraint violation:(0.06176, 17) out of 40
+\end_layout
+
+\begin_layout Plain Layout
+
+max inequality constraint violation:(3.2979, 120) out of 122
+\end_layout
+
+\begin_layout Plain Layout
+
+Fail: optimize returns a feasible solution on 0/2 random seeds.
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{lstlisting}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We then benchmark a set of open source solvers like 
+\begin_inset CommandInset href
+LatexCommand href
+name "ECOS"
+target "https://web.stanford.edu/~boyd/papers/ecos.html"
+literal "false"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset href
+LatexCommand href
+name "SCS"
+target "https://github.com/JuliaOpt/SCS.jl"
+literal "false"
+
+\end_inset
+
+ with a set of commercial solvers 
+\begin_inset CommandInset href
+LatexCommand href
+name "MOSEK"
+target "https://www.mosek.com/"
+literal "false"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset href
+LatexCommand href
+name "CPLEX"
+target "https://www.ibm.com/analytics/cplex-optimizer"
+literal "false"
+
+\end_inset
+
+ and our own Interior Point implementation 
+\begin_inset CommandInset href
+LatexCommand href
+name "optimize.jl"
+target "https://github.com/PhilippeW83440/AA222_Project/blob/master/optimize.jl"
+literal "false"
+
+\end_inset
+
+ (with maxcount set to 20K).
+ They all provide feasible solutions which are very close, and derive same
+ values for the slack variables.
+ The main difference is the runtime: ECOS and MOSEK are the fastest (we
+ also tested Gurobi but out trial license expired before writeup.
+ But it performs similar to CPLEX).
+ As MOSEK and CPLEX are the only solvers handling both Quadratic Cost functions
+ and Mixed Integer Programming, we will use 
+\begin_inset CommandInset href
+LatexCommand href
+name "MOSEK"
+target "https://www.mosek.com/"
+literal "false"
+
+\end_inset
+
+ for our final set of benchmarks instead of 
+\begin_inset CommandInset href
+LatexCommand href
+name "ECOS"
+target "https://web.stanford.edu/~boyd/papers/ecos.html"
+literal "false"
+
+\end_inset
+
+: to test our Collision Avoidance model in a serie of 100 tests.
 \end_layout
 
 \begin_layout Standard
@@ -948,41 +1145,14 @@ Solvers Runtime Benchmark
 \end_layout
 
 \begin_layout Standard
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-begin{lstlisting}
-\end_layout
-
-\begin_layout Plain Layout
-
-MOSEK runtime=13 ms
-\end_layout
-
-\begin_layout Plain Layout
-
-Collision avoidance constraint 1: slack_col=3.19
-\end_layout
-
-\begin_layout Plain Layout
-
-Collision avoidance constraint 2: slack_col=-0.0
-\end_layout
-
-\begin_layout Plain Layout
-
-
-\backslash
-end{lstlisting}
-\end_layout
-
-\end_inset
-
-
+We then analyze further the runtime difference between our own implementation
+ and MOSEK.
+ We are using 160 BFGS iterations (40 during the feasibility search phase
+ and 120 during interior point phase) while MOSEK just requires 20 iterations.
+ We believe the difference is due to the fact that MOSEK implements a Primal-Dua
+l Interior Point method instead of the raw Barrier Interior Point Method.
+ It exhibits better than linear convergence and requires less iterations.
+ 
 \end_layout
 
 \begin_layout Standard
@@ -998,7 +1168,7 @@ begin{lstlisting}
 
 \begin_layout Plain Layout
 
-OPTIMIZE.jl runtime=483 ms
+OPTIMIZE.jl INTERIOR POINT METHOD runtime=256 ms (maxcount set to 10K)
 \end_layout
 
 \begin_layout Plain Layout
@@ -1008,26 +1178,6 @@ Iter 124 BFGS=1.62 ms: INV=0.63 ms, BT=0.38 ms, GRAD=0.40 ms
 
 \begin_layout Plain Layout
 
-max   equality constraint violation:(1.256239e-11, 4) out of 40
-\end_layout
-
-\begin_layout Plain Layout
-
-max inequality constraint violation:(-0.000311, 120) out of 122
-\end_layout
-
-\begin_layout Plain Layout
-
-Collision avoidance constraint: slack_col=[3.19, 0.0]
-\end_layout
-
-\begin_layout Plain Layout
-
-Pass: optimize returns a feasible solution on 2/2 random seeds.
-\end_layout
-
-\begin_layout Plain Layout
-
 
 \backslash
 end{lstlisting}
@@ -1039,20 +1189,48 @@ end{lstlisting}
 \end_layout
 
 \begin_layout Standard
-\align center
+Also our BFGS iterations takes on average around 
+\begin_inset Formula $1.62$
+\end_inset
 
+ ms with:
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $1.62$
+\end_inset
+
+ ms spent doing a 
+\begin_inset Formula $100x100$
+\end_inset
+
+ matrix inversion of our approximated Hessian.
+ Which could be further improved with a direct Hessian inverse approximation.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $0.38$
+\end_inset
+
+ ms in Backtracking line search.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $0.40$
+\end_inset
+
+ ms in approximating Gradient via Finite Differences.
+ By using a Complex Step approach we could probably also further improve
+ this step.
+ 
+\end_layout
+
+\begin_layout Standard
+As a conclusion, we will use MOSEK for our next set of experiments.
 \end_layout
 
 \begin_layout Subsection
 Anti Collision Tests Benchmarks
-\end_layout
-
-\begin_layout Standard
-We use the MOSEK solver for these tests.
- While ECOS is even faster in general, ECOS does not support Mixed Integer
- Programming which we need for the most advanced version of the Collision
- Avoidance model.
- MOSEK is a commercial solver for which we have an educational license.
 \end_layout
 
 \begin_layout Standard
