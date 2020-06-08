@@ -368,6 +368,7 @@ with a Quadratic Cost function with
 \end_inset
 
  linear equality constraints (Dynamics Model).
+ 
 \end_layout
 
 \begin_layout Standard
@@ -395,19 +396,25 @@ x_{0}=x_{\text{init}}\\
 \end_layout
 
 \begin_layout Standard
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-bigbreak	
-\end_layout
-
+We wan't to avoid up to 
+\begin_inset Formula $10$
 \end_inset
 
-Linear Dynamics with Constant Acceleration model in between 2 time steps
+ vehicles crossing our path.
+ Spatio-temporal collision points 
+\begin_inset Formula $\left(t_{\text{col}},s_{\text{col}}\right)$
+\end_inset
+
+ are defined with an associated uncertainty area 
+\begin_inset Formula $t_{\text{col}}\pm250\ ms,\ s_{\text{col}}\pm\Delta_{\text{safety}}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We use linear dynamics model: with Constant Acceleration in between 2 time
+ steps
 \end_layout
 
 \begin_layout Standard

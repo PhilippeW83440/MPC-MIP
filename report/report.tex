@@ -189,7 +189,7 @@ We define a MPC problem over 20 time steps of $250$ ms each\textbf{
 }with a Quadratic Cost function with $x\in\mathbb{R}^{60}$ and $160$
 constraints. We have $120$ linear and nonlinear ($\left\Vert x_{\text{ego}}-x_{\text{obj}}\right\Vert \geq d_{\text{saf}}$)
 inequality constraints and  $40$ linear equality constraints (Dynamics
-Model).
+Model). 
 
 \[
 \underset{u_{0},\ldots,u_{T-1}}{\min}\left(x_{T}-x_{\text{ref}}\right)^{\intercal}Q_{T}\left(x_{T}-x_{\text{ref}}\right)+\sum_{k=0}^{T-1}\left(x_{k}-x_{\text{ref}}\right)^{\intercal}Q\left(x_{k}-x_{\text{ref}}\right)+u_{k}^{\intercal}\;R\;u_{k}
@@ -203,7 +203,11 @@ x_{0}=x_{\text{init}}\\
 \forall\left(t_{\text{col}},s_{\text{col}}\right)_{i\in\left[1,10\right]} & x_{t_{\text{col}}^{\left(i\right)}}\left[1\right]<s_{\text{col}}^{\left(i\right)}-\Delta_{\text{safety}}\text{ or }x_{t_{\text{col}}^{\left(i\right)}}\left[1\right]>s_{\text{col}}^{\left(i\right)}+\Delta_{\text{safety}}
 \end{cases}$
 
-\bigbreak	Linear Dynamics with Constant Acceleration model in between
+We wan't to avoid up to $10$ vehicles crossing our path. Spatio-temporal
+collision points $\left(t_{\text{col}},s_{\text{col}}\right)$ are
+defined with an associated uncertainty area $t_{\text{col}}\pm250\ ms,\ s_{\text{col}}\pm\Delta_{\text{safety}}$
+
+We use linear dynamics model: with Constant Acceleration in between
 2 time steps
 
 \[
