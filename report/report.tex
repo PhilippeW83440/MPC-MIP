@@ -114,7 +114,20 @@
 
 \maketitle
 \begin{abstract}
-We study the problem of Trajectory Optimization. 
+We study the problem of Trajectory Optimization for Autonomous Driving
+where we have to derive a motion plan on a pre-defined path. The challenge
+is to avoid ten vehicles crossing our path at random times and locations.
+We have to drive in an efficient and comfortable way. The main difficulty
+is to avoid collisions with dynamic obstacles while making decisions
+in real-time. As part of a Model Predictive Control (MPC) setup, we
+propose a Collision Avoidance model based on an Elastic Model handling
+disjunctive constraints. We investigate different optimization algorithms:
+Interior Point methods and adaptation of a simplex algorithm to a
+problem initially defined with a quadratic cost function. We provide
+reference implementations of the MPC setup, Collision Avoidance Model
+and a fully custom solver. Finally we benchmark and demonstrate the
+efficiency of our collision avoidance model, both in terms of collision
+avoidance and real-time performances, on a serie of 100 random tests.
 \end{abstract}
 
 \section{Introduction}
@@ -124,11 +137,19 @@ of obstacles \cite{article,Fan2018BaiduAE,Katrakazas2015RealtimeMP,Zhang2020Opti
 One such application for this class of problems is that of autonomous
 driving, where we have an ego vehicle and dynamic obstacles (vehicles,
 pedestrians) which may intersect our desired trajectory and which
-we wish to avoid using motion planning and control. Trajectory optimization
-problems minimize a cost function which takes into account start and
-terminal states, as well as cost along the trajectory path. The design
-space is subject to constraints on the states and control input at
-sampled time points.
+we wish to avoid using motion planning and control. 
+
+\begin{figure}[H]
+\noindent \begin{centering}
+\includegraphics[scale=0.31]{img/test57}
+\par\end{centering}
+\caption{Collision Avoidance Tests Setup}
+\end{figure}
+
+Trajectory optimization minimize a cost function which takes into
+account start and terminal states, as well as cost along the trajectory
+path. The design space is subject to constraints on the states and
+control input at sampled time points.
 
 \section{Related Work}
 
