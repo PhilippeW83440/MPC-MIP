@@ -131,8 +131,8 @@ randomly generated tests.
 
 \section{Introduction}
 
-This project  investigates trajectory optimization in the presence
-of obstacles \cite{article,Fan2018BaiduAE,Katrakazas2015RealtimeMP,Zhang2020OptimizationBasedCA}.
+This project  investigates trajectory optimization \cite{1986asdy.conf....3H}
+in the presence of obstacles \cite{article,Fan2018BaiduAE,Katrakazas2015RealtimeMP,Zhang2020OptimizationBasedCA}.
 One such application for this class of problems is that of autonomous
 driving, where we have an ego vehicle and dynamic obstacles (vehicles,
 pedestrians) which may intersect our desired trajectory and which
@@ -153,17 +153,18 @@ control input at sampled time points.
 \section{Related Work}
 
 A detailed survey of Motion Planning techniques for Autonomous Driving
-is provided in xxx. In order to enable real-time applicability, the
-problem is typically decomposed in a two-stage process. First a path
-is planned and then a Motion Plan is derived over this pre-defined
-path (or over a set of pre-defined paths). This strategy has been
-in use since the DARPA challenge. Path planning typically relies on
-search algorithms (A{*}, D{*}, RRT{*} ...) while the derivation of
-a Motion Plan over a Path typically relies on either pre-computed
-velocity profiles or solving online an Optimal Control problem. While
-MPC is well established for pure trajectory tracking, assuming there
-exists a collision-free trajectory we want to follow, it can also
-be used to derive a collision-free trajectory. In the first case,
+is provided in \cite{7490340,Katrakazas2015RealtimeMP}. In order
+to enable real-time applicability, the problem is typically decomposed
+in a two-stage process. First a path is planned and then a Motion
+Plan is derived over this pre-defined path (or over a set of pre-defined
+paths). This strategy has been in use since the DARPA challenge \cite{article,Ferguson2009MotionPI,article0,article1}.
+Path planning typically relies on search algorithms (A{*}, D{*}, RRT{*}
+...) \cite{inproceedings,5980223} while the derivation of a Motion
+Plan over a Path typically relies on either pre-computed velocity
+profiles or solving online an Optimal Control problem. While MPC is
+well established for pure trajectory tracking \cite{article2}, assuming
+there exists a collision-free trajectory we want to follow, it can
+also be used to derive a collision-free trajectory. In the first case,
 a more complex and non linear vehicle dynamics model is used, while
 in the second case, a linear approximation of the dynamics is used,
 to quickly come up with a collision-free trajectory proposal. This
@@ -173,15 +174,15 @@ and vehicle dynamics feasibility.
 We focus on the Motion Planning problem where a path is pre-defined
 and we want to derive a collision-free trajectory considering a linear
 approximation of the vehicle dynamics. There are several publications
-on this subject, investigating the use of MPC to derive a collision-free
-velocity profile. But they usually assume that a higher level planner
-has already decided whether we have to proceed or yield the way w.r.t.
-any other vehicle crossing our path. While this may be a reasonable
-strategy when dealing with a single or two objects crossing our path,
-we would like to scale to multiple crossing objects. We wan't to decide
-individually and optimally w.r.t. every crossing object, wether we
-should proceed or yield the way. This should be part of the optimization
-problem. 
+on this subject \cite{7995713,Fan2018BaiduAE,7353382}, investigating
+the use of MPC to derive a collision-free velocity profile. But they
+assume that a higher level planner has already decided whether we
+have to proceed or yield the way w.r.t. any other vehicle crossing
+our path. While this may be a reasonable strategy when dealing with
+a single or two objects crossing our path, we would like to scale
+to multiple crossing objects. We would like to decide individually
+and optimally w.r.t. every crossing object, wether we should proceed
+or yield the way. This should be part of the optimization problem. 
 
 \section{Problem Formulation}
 
@@ -190,10 +191,6 @@ We define a MPC problem over 20 time steps of $250$ ms each\textbf{
 constraints. We have $120$ linear and nonlinear ($\left\Vert x_{\text{ego}}-x_{\text{obj}}\right\Vert \geq d_{\text{saf}}$)
 inequality constraints and  $40$ linear equality constraints (Dynamics
 Model). 
-
-\[
-\underset{u_{0},\ldots,u_{T-1}}{\min}\left(x_{T}-x_{\text{ref}}\right)^{\intercal}Q_{T}\left(x_{T}-x_{\text{ref}}\right)+\sum_{k=0}^{T-1}\left(x_{k}-x_{\text{ref}}\right)^{\intercal}Q\left(x_{k}-x_{\text{ref}}\right)+u_{k}^{\intercal}\;R\;u_{k}
-\]
 
 $\text{subject to }\begin{cases}
 x_{k,\text{min}}\leq x_{k}\leq x_{k,\max}\\
