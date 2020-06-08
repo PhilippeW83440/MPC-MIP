@@ -208,22 +208,19 @@ maketitle
 
 \begin_layout Abstract
 We study the problem of Trajectory Optimization for Autonomous Driving where
- we have to derive a motion plan on a pre-defined path.
- The challenge is to avoid ten vehicles crossing our path at random times
- and locations.
- We have to drive in an efficient and comfortable way.
- The main difficulty is to avoid collisions with dynamic obstacles while
- making decisions in real-time.
+ we derive a motion plan on a pre-defined path.
+ The challenge is to avoid ten vehicles crossing our path, optimizing efficiency
+ and comfort, while making decisions in real-time.
  As part of a Model Predictive Control (MPC) setup, we propose a Collision
  Avoidance model based on an Elastic Model handling disjunctive constraints.
  We investigate different optimization algorithms: Interior Point methods
- and adaptation of a simplex algorithm to a problem initially defined with
+ and adaptation of a simplex algorithm to a problem initially defined over
  a quadratic cost function.
  We provide reference implementations of the MPC setup, Collision Avoidance
  Model and a fully custom solver.
  Finally we benchmark and demonstrate the efficiency of our collision avoidance
- model, both in terms of collision avoidance and real-time performances,
- on a serie of 100 random tests.
+ model, both in terms of accuracy and real-time performances, on a serie
+ of 100 randomly generated tests.
 \end_layout
 
 \begin_layout Section
@@ -1105,7 +1102,7 @@ Collision Speed
 \begin_inset Text
 
 \begin_layout Plain Layout
-Baseline
+Baseline (Constant Speed)
 \end_layout
 
 \end_inset
@@ -1288,7 +1285,7 @@ MPC_MIP
 \begin_inset Text
 
 \begin_layout Plain Layout
-Dynamic Programming
+Oracle (Dynamic Programming)
 \end_layout
 
 \end_inset
@@ -1386,7 +1383,28 @@ Conclusion
 \end_layout
 
 \begin_layout Standard
-It works fine ...
+We came up with a detailed analysis of a Trajectory Optimization problem.
+ We tackle the issue of Collision Avoidance of dynamic obstacles where real-time
+ decisions are required.
+ We propose a Collision Avoidance model based on an Elastic Model handling
+ disjunctive constraints.
+ This solution is based on Mixed Integer Programming with core optimization
+ algorithms relying on primal-dual interior point methods.
+ We also investigate how the Simplex algorithm could be adapted to solve
+ a problem initially defined over a quadratic cost function.
+ Finally we demonstrate the efficiency of our proposed model, operating
+ over a continuous state space, with a runtime of 
+\begin_inset Formula $22$
+\end_inset
+
+ ms.
+ While being 
+\begin_inset Formula $1000$
+\end_inset
+
+ x faster than our Oracle, a Dynamic Programming implementation performing
+ an exhaustive search over a discretized solution space, it achieves the
+ same collision avoidance success rate.
 \end_layout
 
 \begin_layout Standard
