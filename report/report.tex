@@ -192,6 +192,10 @@ constraints. We have $120$ linear and nonlinear ($\left\Vert x_{\text{ego}}-x_{\
 inequality constraints and  $40$ linear equality constraints (Dynamics
 Model). 
 
+\[
+\underset{u_{0},\ldots,u_{T-1}}{\min}\left(x_{T}-x_{\text{ref}}\right)^{\intercal}Q_{T}\left(x_{T}-x_{\text{ref}}\right)+\sum_{k=0}^{T-1}\left(x_{k}-x_{\text{ref}}\right)^{\intercal}Q\left(x_{k}-x_{\text{ref}}\right)+u_{k}^{\intercal}\;R\;u_{k}
+\]
+
 $\text{subject to }\begin{cases}
 x_{k,\text{min}}\leq x_{k}\leq x_{k,\max}\\
 u_{k,\text{min}}\leq u_{k}\leq u_{k,\max}\\

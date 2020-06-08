@@ -416,6 +416,17 @@ with a Quadratic Cost function with
 \end_layout
 
 \begin_layout Standard
+\begin_inset Formula 
+\[
+\underset{u_{0},\ldots,u_{T-1}}{\min}\left(x_{T}-x_{\text{ref}}\right)^{\intercal}Q_{T}\left(x_{T}-x_{\text{ref}}\right)+\sum_{k=0}^{T-1}\left(x_{k}-x_{\text{ref}}\right)^{\intercal}Q\left(x_{k}-x_{\text{ref}}\right)+u_{k}^{\intercal}\;R\;u_{k}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 
 \end_layout
 
