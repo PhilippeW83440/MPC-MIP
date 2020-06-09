@@ -1,7 +1,20 @@
 
-
 # AA222_Project
 Final project on Trajectory Optimization
+
+# Experiments
+How to run the series of 100 tests with MPC_MIP algorithm:  
+```bash
+cd itsc  
+julia scn.jl mpc_mip  
+```
+  
+Other supported algorithms:  
+```bash
+cd itsc  
+julia scn.jl mpc
+julia scn.jl dp
+```
 
 ## Elastic Model for Collision Avoidance  
 Sometimes a constraint can not be satisfied, but we would like nevertheless to return a solution that minimizes deviation to our constraint. Instead of just throwing INFEASIBLE ...  
