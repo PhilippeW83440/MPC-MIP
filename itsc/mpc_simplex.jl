@@ -5,9 +5,9 @@ using LinearAlgebra
 using GLPK
 using ECOS
 
-# mpc_mip solves 96% of the tests like UCS/DP (ie all the feasible tests) with a runtime below 30 ms while UCS is at 5.85 sec
+# mpc_simplex solves 96% of the tests like UCS/DP (ie all the feasible tests) with a runtime below 7 ms
 
-# [ Info: METRICS mean values => score -0.09226999999999999, success_rate 0.96, runtime 0.022289628451650213, hardbrakes 0.19, steps_to_goal 53.791666666666664, steps_to_collision 12.0, speed_at_collision 18.738300162852916
+# [ Info: METRICS mean values => score -0.08690000000000003, success_rate 0.96, runtime 0.006954412647981474, hardbrakes 4.72, steps_to_goal 43.479166666666664, steps_to_collision 12.0, speed_at_collision 18.802674177674586
 
 
 using Plots
@@ -24,9 +24,6 @@ solvers = Dict("Mosek" => ()->Mosek.Optimizer(),
 
 pkg = "GLPK"
 solver = solvers[pkg]
-
-# For Minnie Simplex tests
-testu, pkg = true, "GLPK"
 
 
 # Hyperparameter(s) of the Collision Avoidance Model
@@ -209,7 +206,7 @@ function path1d_init(mpc::MpcPath1d)
 end
 
 
-mutable struct SolverData
+mutable struct SimplexData
 	x::Variable
 	# Slack Variables for Collision Avoidance
 	slack_col::Vector{Variable} # Elastic Model
@@ -220,7 +217,7 @@ mutable struct SolverData
 	p::Problem{Float64}
 	num_mpc_obstacles::Int64 # The obstacles visible within MPC time horizon
 
-	function SolverData(mpc)
+	function SimplexData(mpc)
 		s = new()
 
 		s.x = Variable(60)
@@ -249,7 +246,7 @@ mutable struct SolverData
 end
 
 # Dump solution found (text)
-function dump_sol(solv::SolverData)
+function dump_sol(solv::SimplexData)
 	println("status=", solv.p.status)
 	println("cost=", round(solv.p.optval, digits=2))
 	println("x=", round.(solv.x.value, digits=2))
@@ -264,7 +261,7 @@ function dump_sol(solv::SolverData)
 end
 
 # Dump solution found (graph)
-function dump_graph(x0::Vector{Float64}, solv::SolverData, mpc::MpcPath1d, runtime::Int64)
+function dump_graph(x0::Vector{Float64}, solv::SimplexData, mpc::MpcPath1d, runtime::Int64)
 	function circleShape(t, s, Δt, Δs)
 		θ = LinRange(0, 2*π, 500)
 		t .+ Δt*sin.(θ), s .+ Δs*cos.(θ)
@@ -297,7 +294,7 @@ end
 
 if testu
 	mpc = MpcPath1d()
-	solv = SolverData(mpc)
+	solv = SimplexData(mpc)
 	
 	plot(title="s-t graph", xlabel=("t (sec)"), ylabel=("s (m)"), marker=2, legend=:topleft)
 	
@@ -327,9 +324,9 @@ end
 
 # Hooks for scn.jl
 # -------------------------------------------------------------------------
-function mpc_mip()
+function mpc_simplex()
 	mpc = MpcPath1d()
-	solv = SolverData(mpc)
+	solv = SimplexData(mpc)
 	mpc.solv = solv
 
 	# First run (fake one to enable warmstart then)

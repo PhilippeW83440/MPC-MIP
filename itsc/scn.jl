@@ -32,6 +32,7 @@ include("mcts.jl")
 include("search.jl")
 include("mpc.jl")
 include("mpc_mip.jl")
+include("mpc_simplex.jl")
 
 
 abstract type Scn end
@@ -158,6 +159,10 @@ elseif algo == "mpc_mip"
 	agent = mpc_mip()
 	println("mpc_mip agent")
 	#println("mpc mip agent: ", agent)
+elseif algo == "mpc_simplex"
+	agent = mpc_simplex()
+	println("mpc_simplex agent")
+	#println("mpc simplex agent: ", agent)
 elseif algo == "mpc"
 	mdlParams = MdlParams()
 	mpcParams = MpcParams()
@@ -193,7 +198,7 @@ for (num_s, scn_start) in enumerate(scn.dev_set)
 	score, hardbrakes, speed_at_collision = 0, 0, nothing
 	sequence = []
 	runtimes = []
-	if algo == "mcts" || algo == "mpc" || algo == "mpc_mip"
+	if algo == "mcts" || algo == "mpc" || algo == "mpc_mip" || algo == "mpc_simplex"
 		algo == "mcts" && resetTree!(agent)
 		for steps in 1:1000
 			#runtime = @elapsed a = pi0(mdp, s)
