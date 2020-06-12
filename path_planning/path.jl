@@ -35,6 +35,19 @@ println("cartesian y: y=$y\n")
 fbe = integrate(K^2, s)
 println("bending energy: fbe=$fbe\n")
 
+# We switch from parameters a0, a1, a2, a3, sf -> p0, p1, p2, p3, p4
+p0, p1, p2, p3, p4 = @syms p0 p1 p2 p3 p4 
+
+# P0=K(0), p1=K(sf/3), p2=K(2*sf/3), p3=K(sf), p4=sf
+eqns=[a0-p0, a3*(p4/3)^3+a2*(p4/3)^2+a1*(p4/3)+p0-p1, a3*(2*p4/3)^3+a2*(2*p4/3)^2+a1*(2*p4/3)+p0-p2, a3*(p4)^3+a2*(p4)^2+a1*(p4)+p0-p3]
+convert = solve(eqns, [a0, a1, a2, a3])
+
+println(convert)
+println("\nWe auto-magically get the same result as in -Motion Planning for Autonomous Driving with a Conformal Spatio temporal Lattice- section 3 (ICRA 2011):\n")
+for (key,val) in convert
+	println("$key = $val")
+end
+
 
 # --- Optimization problem ---
 
