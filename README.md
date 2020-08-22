@@ -1,6 +1,6 @@
 
 # AA222_Project
-Final project on Trajectory Optimization
+Project on Trajectory Optimization
 
 ## Experiments
 How to run the series of 100 tests with MPC_MIP algorithm:  
